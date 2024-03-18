@@ -1,0 +1,27 @@
+# Directories to ignore
+.vs
+.vscode
+Debug-*/
+Release-*/
+temp/
+# the most common meson build directory
+build/
+# vscode appears to use this
+builddir/
+build-vscode/
+
+# Files to ignore
+*.user
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.users
+# Keep copyrighted BIOS out of here pls :)
+*.BIN
+*.bin
+*.dll
+*.lib
+*.img
+
+# Linux: Makefiles :)
+Makefile

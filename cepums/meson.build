@@ -1,5 +1,7 @@
 cepums_src = [
-'Main.cpp'
+    'Log.cpp',
+    'Main.cpp',
+    'cepumspch.cpp'
 ]
 
-cepums = executable('cepums-alpha', cepums_src)
+cepums = executable('cepums-alpha', cepums_src, dependencies : [fmt])

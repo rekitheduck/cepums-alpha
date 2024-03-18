@@ -1,6 +1,10 @@
-#include <cstdio>
+#include "Log.h"
 
 int main(int argc, char** argv) {
-    printf("meow\n");
+    // Initialize the basics
+    Cepums::Log::init();
+
+    DC_CORE_INFO("Cepums-Alpha starting up ...");
+
     return 0;
 }

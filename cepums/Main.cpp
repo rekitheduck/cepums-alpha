@@ -1,4 +1,5 @@
 #include "Log.h"
+#include "Memory.h"
 #include "Processor/Processor.h"
 
 int main(int argc, char** argv) {
@@ -6,8 +7,12 @@ int main(int argc, char** argv) {
     Cepums::Log::init();
 
     Cepums::Processor processor;
+    Cepums::Memory memory;
 
-    DC_CORE_INFO("Cepums-Alpha starting up ...");
+    LOG_INFO("Cepums-Alpha starting up ...");
+    while (true) {
+        processor.execute(memory);
+    }
 
     return 0;
 }

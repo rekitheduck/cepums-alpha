@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "Memory.h"
+
 namespace Cepums {
 
 class Processor {
@@ -9,7 +11,7 @@ class Processor {
     Processor() { reset(); }
 
     void reset();
-    void execute();
+    void execute(Memory& m);
 
    private:
     // Program Counter register

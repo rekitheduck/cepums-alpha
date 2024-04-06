@@ -3,6 +3,8 @@ cepums_src = [
     'Main.cpp',
     'cepumspch.cpp',
 
+    'Memory.cpp',
+
     'Processor/Processor.cpp'
 ]
 

@@ -82,7 +82,10 @@
 #define SET_BIT(byte, bit) byte |= BIT(bit)
 
 // Extracyt the last 6 bits which is an opcode
-#define EXTRACT_OPCODE(quad) (quad >> 26) & 0x3F;
+#define EXTRACT_OPCODE(quad) (quad >> 26) & 0x3F; // 6 bits
+#define EXTRACT_REGISTER_A(quad) (quad >> 21) & 0x1F; // 5 bits
+#define EXTRACT_REGISTER_B(quad) (quad >> 16) & 0x1F; // 5 bits
+#define EXTRACT_MEMORY_DISPLACEMENT(quad) quad & 0xFFFF; // 16-bits
 
 namespace Cepums {
 

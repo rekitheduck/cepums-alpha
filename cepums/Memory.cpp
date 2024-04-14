@@ -19,6 +19,10 @@ Memory::Memory() {
              0x00, 0xfd, 0x77, 0x07, 0x00, 0x3f, 0x20, 0x00, 0x00, 0xe1, 0x77};
 }
 
+uint32_t Memory::readDouble(uint64_t address) {
+    return 0;
+}
+
 uint64_t Memory::readQuad(uint64_t address) {
     return 0;
 }

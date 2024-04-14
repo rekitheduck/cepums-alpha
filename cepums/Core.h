@@ -81,6 +81,9 @@
 #define IS_PARITY_EVEN(byteOrWord) (~byteOrWord) & 1
 #define SET_BIT(byte, bit) byte |= BIT(bit)
 
+// Extracyt the last 6 bits which is an opcode
+#define EXTRACT_OPCODE(quad) (quad >> 26) & 0x3F;
+
 namespace Cepums {
 
 // I don't know how this works

@@ -22,6 +22,7 @@ void Processor::execute(Memory& m) {
     switch (opcode) {
         case 0x00: return ins$call_pal(m, instruction_quad);
         case 0x08: return ins$lda(m, Cepums::Register(register_a), Cepums::Register(register_b), memory_displacement);
+        case 0x09: return ins$ldah(m, Cepums::Register(register_a), Cepums::Register(register_b), memory_displacement);
         default: ILLEGAL_INSTRUCTION(); break;
     }
 

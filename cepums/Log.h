@@ -1,5 +1,6 @@
 #pragma once
 
+#define FMT_UNICODE 0
 #include <spdlog/fmt/ostr.h>
 #include <spdlog/spdlog.h>
 

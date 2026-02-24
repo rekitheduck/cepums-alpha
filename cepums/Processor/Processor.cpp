@@ -1,5 +1,6 @@
 #include "Processor.h"
-#include "cepumspch.h"
+
+#include "Log.h"
 
 namespace Cepums {
 void Processor::reset() {}
@@ -19,6 +20,7 @@ void Processor::execute(Memory& m) {
     uint8_t register_b = EXTRACT_REGISTER_B(instruction_quad);
     uint16_t memory_displacement = EXTRACT_MEMORY_DISPLACEMENT(instruction_quad);
 
+    // opcode is the first 6 bits, so it can hold 64 distinct values
     switch (opcode) {
         case 0x00: return ins$call_pal(m, instruction_quad);
         case 0x08: return ins$lda(m, Cepums::Register(register_a), Cepums::Register(register_b), memory_displacement);
@@ -34,7 +36,7 @@ uint64_t Processor::getIntegerRegister(const Register& reg) const {
         // Tried to get integer register with a float register value
         VERIFY_NOT_REACHED();
     }
-    switch (reg.num()) {
+    switch (reg.registerBits()) {
         case 0: return m_r0;
         case 1: return m_r1;
         case 2: return m_r2;
@@ -77,7 +79,7 @@ void Processor::setIntegerRegister(const Register& reg, uint64_t value) {
         // Tried to set integer register with a float register value
         VERIFY_NOT_REACHED();
     }
-    switch (reg.num()) {
+    switch (reg.registerBits()) {
         case 0: m_r0 = value; break;
         case 1: m_r1 = value; break;
         case 2: m_r2 = value; break;

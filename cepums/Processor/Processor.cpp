@@ -1,6 +1,8 @@
 #include "Processor.h"
 
+#include "Core.h"
 #include "Log.h"
+#include "ProcessorUtils.h"
 
 namespace Cepums {
 void Processor::reset() {}
@@ -21,10 +23,12 @@ void Processor::execute(Memory& m) {
     uint16_t memory_displacement = EXTRACT_MEMORY_DISPLACEMENT(instruction_quad);
 
     // opcode is the first 6 bits, so it can hold 64 distinct values
-    switch (opcode) {
-        case 0x00: return ins$call_pal(m, instruction_quad);
-        case 0x08: return ins$lda(m, Cepums::Register(register_a), Cepums::Register(register_b), memory_displacement);
-        case 0x09: return ins$ldah(m, Cepums::Register(register_a), Cepums::Register(register_b), memory_displacement);
+    switch (decodeInstruction(opcode)) {
+        case Instruction::CallPal: return ins$call_pal(m, instruction_quad);
+        case Instruction::LDA:
+            return ins$lda(m, Cepums::Register(register_a), Cepums::Register(register_b), memory_displacement);
+        case Instruction::LDAH:
+            return ins$ldah(m, Cepums::Register(register_a), Cepums::Register(register_b), memory_displacement);
         default: ILLEGAL_INSTRUCTION(); break;
     }
 
@@ -125,6 +129,10 @@ void Processor::ins$ldah(Memory& m, Register destination, Register source, uint1
     int16_t signed_disp = memory_disp * 65536;
     uint64_t address = getIntegerRegister(source) + signed_disp;
     setIntegerRegister(destination, address);
+}
+
+void Processor::ins$call_pal(Memory& m, uint64_t function) {
+    TODO();
 }
 
 } // namespace Cepums

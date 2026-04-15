@@ -14,16 +14,20 @@ int main(int argc, char** argv) {
 
     LOG_DEBUG("Current path is {0}", fs::current_path().string());
 
-    Cepums::parseElf(std::ifstream("palcode-clipper", std::ios::binary));
-
-    return 0;
-
     Cepums::Processor processor;
     Cepums::Memory memory;
+
+    Cepums::parseElf(std::ifstream("palcode-clipper", std::ios::binary));
+
+    // TODO: implement a proper memory system
+    // memory.mapROM(0xfffffc0000000000, Cepums::parseElf(std::ifstream("palcode-clipper", std::ios::binary)));
+    // For now, RAM is hardcoded to have a few palcode instructions
 
     LOG_INFO("Cepums-Alpha starting up ...");
     while (true) {
         processor.execute(memory);
+        LOG_DEBUG("one instruction done");
+        return 0;
     }
 
     return 0;

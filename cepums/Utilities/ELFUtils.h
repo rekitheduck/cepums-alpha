@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <fstream>
+#include <vector>
 
 namespace Cepums {
 
@@ -22,6 +23,17 @@ struct ElfHeader {
     uint16_t e_shstrndx;
 };
 
-void parseElf(std::ifstream file);
+struct ElfProgramHeader {
+    uint32_t p_type;
+    uint32_t p_flags;
+    uint64_t p_offset;
+    uint64_t p_vaddr;
+    uint64_t p_addr;
+    uint64_t p_filesz;
+    uint64_t p_memsz;
+    uint64_t p_align;
+};
+
+std::vector<uint8_t> parseElf(std::ifstream file);
 
 } // namespace Cepums

@@ -1,4 +1,6 @@
 #include "Memory.h"
+#include "Core.h"
+#include "Log.h"
 
 namespace Cepums {
 Memory::Memory() {
@@ -14,16 +16,64 @@ Memory::Memory() {
     fffffc0000000010:	07 00 3f 20 	lda	t0,7
     fffffc0000000014:	00 00 e1 77 	pal1d	0x3e10000
     */
-    m_ram = {0x0,  0x0,  0xa0, 0x01, 0x00, 0xbd, 0x27, 0x4c, 0x2f, 0xbd, 0x23, 0x32,
-             0x00, 0xfd, 0x77, 0x07, 0x00, 0x3f, 0x20, 0x00, 0x00, 0xe1, 0x77};
+    m_ram = {0x0,  0x0,  0xa0, 0xc3, 0x01, 0x00, 0xbd, 0x27, 0x4c, 0x2f, 0xbd, 0x23,
+             0x32, 0x00, 0xfd, 0x77, 0x07, 0x00, 0x3f, 0x20, 0x00, 0x00, 0xe1, 0x77};
 }
 
 uint32_t Memory::readDouble(uint64_t address) {
+    LOG_DEBUG("[MM] reading double at 0x{0:x}", address);
+
+    // TEMP: palcode is mapped at 0xfffffc0000000000. so first few accesses at the start should be reading code from
+    // there
+    if (address >= 0xfffffc0000000000) {
+        const auto address_to_read = address - 0xfffffc0000000000;
+        if (address_to_read >= m_ram.size() || address_to_read + 4 >= m_ram.size()) {
+            LOG_ERROR("[MM] address too big");
+            TODO();
+        }
+        return (static_cast<uint32_t>(m_ram[address_to_read])) | // LSB
+               (static_cast<uint32_t>(m_ram[address_to_read + 1]) << 8) |
+               (static_cast<uint32_t>(m_ram[address_to_read + 2]) << 16) |
+               (static_cast<uint32_t>(m_ram[address_to_read + 3]) << 24);
+    } else {
+        LOG_ERROR("[MM] adress out of range :(");
+        TODO();
+    }
+
+    VERIFY_NOT_REACHED();
     return 0;
 }
 
 uint64_t Memory::readQuad(uint64_t address) {
+    LOG_DEBUG("[MM] reading quad at 0x{0:x}", address);
+
+    // TEMP: palcode is mapped at 0xfffffc0000000000. so first few accesses at the start should be reading code from
+    // there
+    if (address >= 0xfffffc0000000000) {
+        const auto address_to_read = address - 0xfffffc0000000000;
+        if (address_to_read >= m_ram.size() || address_to_read + 7 >= m_ram.size()) {
+            LOG_ERROR("[MM] address too big");
+            TODO();
+        }
+        return (static_cast<uint64_t>(m_ram[address_to_read])) | // LSB
+               (static_cast<uint64_t>(m_ram[address_to_read + 1]) << 8) |
+               (static_cast<uint64_t>(m_ram[address_to_read + 2]) << 16) |
+               (static_cast<uint64_t>(m_ram[address_to_read + 3]) << 24) |
+               (static_cast<uint64_t>(m_ram[address_to_read + 4]) << 32) |
+               (static_cast<uint64_t>(m_ram[address_to_read + 5]) << 40) |
+               (static_cast<uint64_t>(m_ram[address_to_read + 6]) << 48) |
+               (static_cast<uint64_t>(m_ram[address_to_read + 7]) << 56);
+    } else {
+        LOG_ERROR("[MM] adress out of range :(");
+        TODO();
+    }
+
+    VERIFY_NOT_REACHED();
     return 0;
+}
+
+void Memory::mapROM(uint64_t address, std::vector<uint8_t> rom) {
+    VERIFY_NOT_REACHED();
 }
 
 } // namespace Cepums

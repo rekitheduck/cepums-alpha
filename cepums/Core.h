@@ -4,7 +4,7 @@
 
 #ifdef _WIN32
 #ifdef CEPUMS_DEBUG
-#define DC_CORE_ASSERT(x, ...)                                    \
+#define CEPUMS_ASSERT(x, ...)                                     \
     {                                                             \
         if (!(x)) {                                               \
             LOG_CRITICAL("Assertation failed: {0}", __VA_ARGS__); \
@@ -12,7 +12,7 @@
         }                                                         \
     }
 #else
-#define DC_CORE_ASSERT(x, ...)
+#define CEPUMS_ASSERT(x, ...)
 #endif
 #define TODO()                                                   \
     {                                                            \
@@ -34,7 +34,7 @@
     __debugbreak()
 #else
 // TODO: figure out how to do debugging on gdb
-#define DC_CORE_ASSERT(x, ...)                                                                      \
+#define CEPUMS_ASSERT(x, ...)                                                                       \
     {                                                                                               \
         if (!(x)) {                                                                                 \
             LOG_CRITICAL("Assertation failed: {0} in {1} at {2}", __VA_ARGS__, __FILE__, __LINE__); \
@@ -63,8 +63,7 @@
 
 #define INSTRUCTION_TRACE(...) \
     if (s_debugSpam)           \
-    DC_CORE_WARN(__VA_ARGS__)
-// #define INSTRUCTION_TRACE(...)
+    LOG_WARN(__VA_ARGS__)
 
 #define BIT(x) (1 << x)
 #define IS_BIT_SET(number, bit) ((number >> bit) & 1U)
@@ -81,21 +80,30 @@
 #define IS_PARITY_EVEN(byteOrWord) (~byteOrWord) & 1
 #define SET_BIT(byte, bit) byte |= BIT(bit)
 
-// Extracyt the last 6 bits which is an opcode
-#define EXTRACT_OPCODE(quad) (quad >> 26) & 0x3F; // 6 bits
-#define EXTRACT_REGISTER_A(quad) (quad >> 21) & 0x1F; // 5 bits
-#define EXTRACT_REGISTER_B(quad) (quad >> 16) & 0x1F; // 5 bits
-#define EXTRACT_MEMORY_DISPLACEMENT(quad) quad & 0xFFFF; // 16-bits
+// Extract the last 6 bits which is an opcode
+#define EXTRACT_OPCODE(doubleword) (doubleword >> 26) & 0x3F; // 6 bits
+#define EXTRACT_REGISTER_A(doubleword) (doubleword >> 21) & 0x1F; // 5 bits
+#define EXTRACT_REGISTER_B(doubleword) (doubleword >> 16) & 0x1F; // 5 bits
+#define EXTRACT_FUNCTION(doubleword) (doubleword >> 1) & 0xFFFF; // 15-bits
+#define EXTRACT_RC(doubleword) doubleword & 0x1; // 1-bit
+#define EXTRACT_MEMORY_DISPLACEMENT(doubleword) doubleword & 0xFFFF; // 16-bits
+#define EXTRACT_BRANCH_DISPLACEMENT(doubleword) doubleword & 0x1FFFFF; // 21-bits
+#define EXTRACT_PAL_FUNCTION(doubleword) doubleword & 0x03FFFFFF; // 26-bits
 
 namespace Cepums {
 
 // I don't know how this works
-static uint16_t signExtendByteToWord(uint8_t byte) {
-    uint16_t temp = 1u << (8 - 1);
-    return (byte ^ temp) - temp;
+[[maybe_unused]] static uint16_t signExtendByteToWord(uint8_t byte) {
+    uint16_t mask = 1u << (8 - 1);
+    return (byte ^ mask) - mask;
 }
 
-static char halfByteToHexChar(uint8_t halfbyte) {
+[[maybe_unused]] static uint64_t signExtendBranchDisplacementToQuad(uint32_t displ) {
+    uint64_t mask = 1u << (20 - 1);
+    return (displ ^ mask) - mask;
+}
+
+[[maybe_unused]] static char halfByteToHexChar(uint8_t halfbyte) {
     if (halfbyte < 0xA)
         return halfbyte + 48;
     else

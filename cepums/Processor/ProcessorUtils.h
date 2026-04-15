@@ -4,7 +4,7 @@
 
 namespace Cepums {
 
-enum class Instruction { Invalid, CallPal, LDA, LDAH };
+enum class Instruction { Invalid, CallPal, LDA, LDAH, BR };
 
 Instruction decodeInstruction(uint8_t opcode);
 

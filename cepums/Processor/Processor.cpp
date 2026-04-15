@@ -8,131 +8,159 @@ namespace Cepums {
 void Processor::reset() {}
 
 void Processor::execute(Memory& m) {
-    LOG_DEBUG("PC: {0}", m_pc);
+    LOG_DEBUG("PC: {0:x}h", m_pc);
 
     // Fetch instruction (32-bits)
-    uint32_t instruction_quad = m.readDouble(m_pc);
+    uint32_t instruction_doubleword = m.readDouble(m_pc);
+    LOG_DEBUG("Instruction data loaded: {0:x}h  0b{0:b}", instruction_doubleword);
 
-    // Decode instruction
-    // 6-bit opcode
-    uint8_t opcode = EXTRACT_OPCODE(instruction_quad);
+    // Increment program counter
+    m_pc += 4;
 
-    // Memory Instruction Format (might get unused if the current instruction doesn't use this)
-    uint8_t register_a = EXTRACT_REGISTER_A(instruction_quad);
-    uint8_t register_b = EXTRACT_REGISTER_B(instruction_quad);
-    uint16_t memory_displacement = EXTRACT_MEMORY_DISPLACEMENT(instruction_quad);
+    // Decode various bits of the doubleword
+    uint8_t opcode = EXTRACT_OPCODE(instruction_doubleword); // 6 bit opcode
+    uint8_t register_a = EXTRACT_REGISTER_A(instruction_doubleword);
+    uint8_t register_b = EXTRACT_REGISTER_B(instruction_doubleword);
+    uint16_t function = EXTRACT_FUNCTION(instruction_doubleword);
+    uint8_t rc = EXTRACT_RC(instruction_doubleword);
+    uint16_t memory_displacement = EXTRACT_MEMORY_DISPLACEMENT(instruction_doubleword);
+    uint32_t branch_displacement = EXTRACT_BRANCH_DISPLACEMENT(instruction_doubleword);
+    uint32_t pal_function = EXTRACT_PAL_FUNCTION(instruction_doubleword);
 
-    // opcode is the first 6 bits, so it can hold 64 distinct values
+    LOG_DEBUG("    Register A: {0:x}h  0b{0:b}", register_a);
+    LOG_DEBUG("    Register B: {0:x}h  0b{0:b}", register_b);
+    LOG_DEBUG("    branch_displacement: {0:x}h  0b{0:b}", branch_displacement);
+
+    // TODO: wikipedia has different bits defined, need to update them here and the above macros
+
+    // Operate format uses:
+    // opcode, RA, RB, Function, RC
+
+    // Memory format uses:
+    // opcode, RA, RB, Memory displacement
+
+    // Branch format uses:
+    // opcode, RA, Branch displacement
+
+    // PALcode format uses:
+    // opcode, PAL function
+
+    LOG_DEBUG("opcode: {0:x}h", opcode);
+
+    // opcode is the first 6 bits, so it can hold 64 distinct values which means 64 instructions
     switch (decodeInstruction(opcode)) {
-        case Instruction::CallPal: return ins$call_pal(m, instruction_quad);
+        case Instruction::CallPal: return ins$call_pal(m, pal_function);
         case Instruction::LDA:
             return ins$lda(m, Cepums::Register(register_a), Cepums::Register(register_b), memory_displacement);
         case Instruction::LDAH:
             return ins$ldah(m, Cepums::Register(register_a), Cepums::Register(register_b), memory_displacement);
+        case Instruction::BR: return ins$br(m, Cepums::Register(register_a), branch_displacement);
         default: ILLEGAL_INSTRUCTION(); break;
     }
-
-    m_pc += 4;
 }
 
-uint64_t Processor::getIntegerRegister(const Register& reg) const {
+uint64_t Processor::getIntegerRegisterValue(const Register& reg) const {
+    // Bad type
     if (reg.isInteger() == false) {
-        // Tried to get integer register with a float register value
+        LOG_DEBUG("getIntegerRegisterValue: bits: {0}", reg.registerBits());
         VERIFY_NOT_REACHED();
     }
-    switch (reg.registerBits()) {
-        case 0: return m_r0;
-        case 1: return m_r1;
-        case 2: return m_r2;
-        case 3: return m_r3;
-        case 4: return m_r4;
-        case 5: return m_r5;
-        case 6: return m_r6;
-        case 7: return m_r7;
-        case 8: return m_r8;
-        case 9: return m_r9;
-        case 10: return m_r10;
-        case 11: return m_r11;
-        case 12: return m_r12;
-        case 13: return m_r13;
-        case 14: return m_r14;
-        case 15: return m_r15;
-        case 16: return m_r16;
-        case 17: return m_r17;
-        case 18: return m_r18;
-        case 19: return m_r19;
-        case 20: return m_r20;
-        case 21: return m_r21;
-        case 22: return m_r22;
-        case 23: return m_r23;
-        case 24: return m_r24;
-        case 25: return m_r25;
-        case 26: return m_r26;
-        case 27: return m_r27;
-        case 28: return m_r28;
-        case 29: return m_r29;
-        case 30: return m_r30;
-        default: VERIFY_NOT_REACHED(); break;
+
+    LOG_DEBUG("reg_bits: {0:b}", reg.registerBits());
+
+    // We have 32 registers. Last one is hardwired to 0
+    if (reg.registerBits() < 31) {
+        return m_gp_registers[reg.registerBits()];
+    } else if (reg.registerBits() == 31) {
+        return 0;
     }
+    LOG_DEBUG("getIntegerRegisterValue: bits: {0}", reg.registerBits());
+
+    VERIFY_NOT_REACHED();
 
     return 0;
 }
 
-void Processor::setIntegerRegister(const Register& reg, uint64_t value) {
-    if (reg.isInteger() == false) {
-        // Tried to set integer register with a float register value
+double Processor::getFloatRegisterValue(const Register& reg) const {
+    // Bad type
+    if (reg.isInteger() == true) {
+        LOG_DEBUG("getIntegerRegisterValue: bits: {0}", reg.registerBits());
         VERIFY_NOT_REACHED();
     }
-    switch (reg.registerBits()) {
-        case 0: m_r0 = value; break;
-        case 1: m_r1 = value; break;
-        case 2: m_r2 = value; break;
-        case 3: m_r3 = value; break;
-        case 4: m_r4 = value; break;
-        case 5: m_r5 = value; break;
-        case 6: m_r6 = value; break;
-        case 7: m_r7 = value; break;
-        case 8: m_r8 = value; break;
-        case 9: m_r9 = value; break;
-        case 10: m_r10 = value; break;
-        case 11: m_r11 = value; break;
-        case 12: m_r12 = value; break;
-        case 13: m_r13 = value; break;
-        case 14: m_r14 = value; break;
-        case 15: m_r15 = value; break;
-        case 16: m_r16 = value; break;
-        case 17: m_r17 = value; break;
-        case 18: m_r18 = value; break;
-        case 19: m_r19 = value; break;
-        case 20: m_r20 = value; break;
-        case 21: m_r21 = value; break;
-        case 22: m_r22 = value; break;
-        case 23: m_r23 = value; break;
-        case 24: m_r24 = value; break;
-        case 25: m_r25 = value; break;
-        case 26: m_r26 = value; break;
-        case 27: m_r27 = value; break;
-        case 28: m_r28 = value; break;
-        case 29: m_r29 = value; break;
-        case 30: m_r30 = value; break;
-        default: VERIFY_NOT_REACHED(); break;
+
+    // We have 32 registers. Last one is hardwired to 0
+    if (reg.registerBits() < 31) {
+        LOG_DEBUG("getIntegerRegisterValue: bits: {0}", reg.registerBits());
+        return m_fp_registers[reg.registerBits()];
+    } else if (reg.registerBits() == 31) {
+        return 0.0;
     }
+
+    VERIFY_NOT_REACHED();
+
+    return 0;
+}
+
+void Processor::setIntegerRegister(const Register& reg, const uint64_t& value) {
+    // Bad type
+    if (reg.isInteger() == false) {
+        VERIFY_NOT_REACHED();
+    }
+
+    // We have 32 registers. Writes to last one are ignored
+    if (reg.registerBits() < 31) {
+        m_gp_registers[reg.registerBits()] = value;
+        return;
+    } else if (reg.registerBits() == 31) {
+        return;
+    }
+
+    VERIFY_NOT_REACHED();
+}
+
+void Processor::setFloatRegister(const Register& reg, const double& value) {
+    // Bad type
+    if (reg.isInteger() == true) {
+        VERIFY_NOT_REACHED();
+    }
+
+    // We have 32 registers. Writes to last one are ignored
+    if (reg.registerBits() < 31) {
+        m_fp_registers[reg.registerBits()] = value;
+        return;
+    } else if (reg.registerBits() == 31) {
+        return;
+    }
+
+    VERIFY_NOT_REACHED();
 }
 
 void Processor::ins$lda(Memory& m, Register destination, Register source, uint16_t memory_disp) {
     int16_t signed_disp = memory_disp;
-    uint64_t address = getIntegerRegister(source) + signed_disp;
+    uint64_t address = getIntegerRegisterValue(source) + signed_disp;
     setIntegerRegister(destination, address);
 }
 
 void Processor::ins$ldah(Memory& m, Register destination, Register source, uint16_t memory_disp) {
     int16_t signed_disp = memory_disp * 65536;
-    uint64_t address = getIntegerRegister(source) + signed_disp;
+    uint64_t address = getIntegerRegisterValue(source) + signed_disp;
     setIntegerRegister(destination, address);
 }
 
-void Processor::ins$call_pal(Memory& m, uint64_t function) {
+void Processor::ins$call_pal(Memory& m, uint32_t function) {
+    LOG_DEBUG("ins$call_pal with function {0:x}h", function);
     TODO();
+}
+
+void Processor::ins$br(Memory& m, Register reg, uint32_t branch_displacement) {
+    LOG_DEBUG("branch_displacement: {0:x}h", branch_displacement);
+    LOG_DEBUG("reg value: {0:x}h", getIntegerRegisterValue(reg));
+    LOG_DEBUG(" gonna modify reg: {0}", reg.registerBits());
+    setIntegerRegister(reg, m_pc);
+    const auto new_displ = signExtendBranchDisplacementToQuad(branch_displacement);
+    LOG_DEBUG("old PC: {0:x}h", m_pc);
+    m_pc = m_pc + 4 * new_displ;
+    LOG_DEBUG("new PC: {0:x}h", m_pc);
 }
 
 } // namespace Cepums

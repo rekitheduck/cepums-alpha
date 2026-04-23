@@ -3,77 +3,52 @@
 #include "Log.h"
 
 namespace Cepums {
-Memory::Memory() {
-    // Temporary test code in memory
-    m_ram.reserve(50000);
-
-    /*
-    fffffc0000000000 <.text>:
-    fffffc0000000000:	00 00 a0 c3 	br	gp,0xfffffc0000000004
-    fffffc0000000004:	01 00 bd 27 	ldah	gp,1(gp)
-    fffffc0000000008:	4c 2f bd 23 	lda	gp,12108(gp)
-    fffffc000000000c:	32 00 fd 77 	pal1d	0x3fd0032
-    fffffc0000000010:	07 00 3f 20 	lda	t0,7
-    fffffc0000000014:	00 00 e1 77 	pal1d	0x3e10000
-    */
-    m_ram = {0x0,  0x0,  0xa0, 0xc3, 0x01, 0x00, 0xbd, 0x27, 0x4c, 0x2f, 0xbd, 0x23,
-             0x32, 0x00, 0xfd, 0x77, 0x07, 0x00, 0x3f, 0x20, 0x00, 0x00, 0xe1, 0x77};
-}
+Memory::Memory() {}
 
 uint32_t Memory::readDouble(uint64_t address) {
     LOG_DEBUG("[MM] reading double at 0x{0:x}", address);
-
-    // TEMP: palcode is mapped at 0xfffffc0000000000. so first few accesses at the start should be reading code from
-    // there
-    if (address >= 0xfffffc0000000000) {
-        const auto address_to_read = address - 0xfffffc0000000000;
-        if (address_to_read >= m_ram.size() || address_to_read + 4 >= m_ram.size()) {
-            LOG_ERROR("[MM] address too big");
-            TODO();
+    for (const auto& mapping : m_mappings) {
+        if (address >= mapping.start_address && address + 3 < mapping.start_address + mapping.data.size()) {
+            const auto address_to_read = address - mapping.start_address;
+            return (static_cast<uint32_t>(mapping.data[address_to_read])) | // LSB
+                   (static_cast<uint32_t>(mapping.data[address_to_read + 1]) << 8) |
+                   (static_cast<uint32_t>(mapping.data[address_to_read + 2]) << 16) |
+                   (static_cast<uint32_t>(mapping.data[address_to_read + 3]) << 24);
         }
-        return (static_cast<uint32_t>(m_ram[address_to_read])) | // LSB
-               (static_cast<uint32_t>(m_ram[address_to_read + 1]) << 8) |
-               (static_cast<uint32_t>(m_ram[address_to_read + 2]) << 16) |
-               (static_cast<uint32_t>(m_ram[address_to_read + 3]) << 24);
-    } else {
-        LOG_ERROR("[MM] adress out of range :(");
-        TODO();
     }
 
+    LOG_ERROR("[MM] Address={0:x}h not mapped!", address);
     VERIFY_NOT_REACHED();
+
     return 0;
 }
 
 uint64_t Memory::readQuad(uint64_t address) {
     LOG_DEBUG("[MM] reading quad at 0x{0:x}", address);
 
-    // TEMP: palcode is mapped at 0xfffffc0000000000. so first few accesses at the start should be reading code from
-    // there
-    if (address >= 0xfffffc0000000000) {
-        const auto address_to_read = address - 0xfffffc0000000000;
-        if (address_to_read >= m_ram.size() || address_to_read + 7 >= m_ram.size()) {
-            LOG_ERROR("[MM] address too big");
-            TODO();
+    for (const auto& mapping : m_mappings) {
+        if (address >= mapping.start_address && address + 7 < mapping.start_address + mapping.data.size()) {
+            const auto address_to_read = address - mapping.start_address;
+            return (static_cast<uint64_t>(mapping.data[address_to_read])) | // LSB
+                   (static_cast<uint64_t>(mapping.data[address_to_read + 1]) << 8) |
+                   (static_cast<uint64_t>(mapping.data[address_to_read + 2]) << 16) |
+                   (static_cast<uint64_t>(mapping.data[address_to_read + 3]) << 24) |
+                   (static_cast<uint64_t>(mapping.data[address_to_read + 4]) << 32) |
+                   (static_cast<uint64_t>(mapping.data[address_to_read + 5]) << 40) |
+                   (static_cast<uint64_t>(mapping.data[address_to_read + 6]) << 48) |
+                   (static_cast<uint64_t>(mapping.data[address_to_read + 7]) << 56);
         }
-        return (static_cast<uint64_t>(m_ram[address_to_read])) | // LSB
-               (static_cast<uint64_t>(m_ram[address_to_read + 1]) << 8) |
-               (static_cast<uint64_t>(m_ram[address_to_read + 2]) << 16) |
-               (static_cast<uint64_t>(m_ram[address_to_read + 3]) << 24) |
-               (static_cast<uint64_t>(m_ram[address_to_read + 4]) << 32) |
-               (static_cast<uint64_t>(m_ram[address_to_read + 5]) << 40) |
-               (static_cast<uint64_t>(m_ram[address_to_read + 6]) << 48) |
-               (static_cast<uint64_t>(m_ram[address_to_read + 7]) << 56);
-    } else {
-        LOG_ERROR("[MM] adress out of range :(");
-        TODO();
     }
 
+    LOG_ERROR("[MM] Address={0:x}h not mapped!", address);
     VERIFY_NOT_REACHED();
+
     return 0;
 }
 
 void Memory::mapROM(uint64_t address, std::vector<uint8_t> rom) {
-    VERIFY_NOT_REACHED();
+    // TODO: verify there's no overlap!
+    m_mappings.emplace_back(address, true, rom);
 }
 
 } // namespace Cepums

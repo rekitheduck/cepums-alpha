@@ -59,7 +59,8 @@ void Processor::execute(Memory& m) {
         case Instruction::MTPR:
             return ins$mtpr(m, Cepums::Register(register_b),
                             memory_displacement); // register_a and register_b must be the same? but they're not for me
-        default: ILLEGAL_INSTRUCTION(); break;
+        case Instruction::Invalid: ILLEGAL_INSTRUCTION(); return;
+        default: TODO_INSTRUCTION(); return;
     }
 }
 
@@ -172,12 +173,12 @@ void Processor::ins$br(Memory& m, Register reg, uint32_t branch_displacement) {
 }
 
 void Processor::ins$mtpr(Memory& m, Register source, uint16_t index) {
-    LOG_INFO("mtpr$br");
+    LOG_INFO("ins$mtpr r{0}, {1}", source.registerBits(), index);
     LOG_DEBUG("[mtpr]    index: {0}", index);
-    if (index == 50) {
-        m_iprs[index] = getIntegerRegisterValue(source);
-    } else {
-        TODO();
+    switch (index) {
+        case 0: // Processor State flag
+        case 50: m_iprs[index] = getIntegerRegisterValue(source); break;
+        default: TODO(); break;
     }
 }
 

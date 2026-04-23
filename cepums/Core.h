@@ -59,6 +59,11 @@
         LOG_CRITICAL("TODO hit in {0}:{1}", __FILE__, __LINE__); \
         abort();                                                 \
     }
+#define TODO_INSTRUCTION()                                                            \
+    {                                                                                 \
+        LOG_CRITICAL("Unimplemented instruction hit in {0}:{1}", __FILE__, __LINE__); \
+        abort();                                                                      \
+    }
 #endif
 
 #define INSTRUCTION_TRACE(...) \

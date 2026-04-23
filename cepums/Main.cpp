@@ -19,15 +19,19 @@ int main(int argc, char** argv) {
 
     Cepums::parseElf(std::ifstream("palcode-clipper", std::ios::binary));
 
-    // TODO: implement a proper memory system
-    // memory.mapROM(0xfffffc0000000000, Cepums::parseElf(std::ifstream("palcode-clipper", std::ios::binary)));
-    // For now, RAM is hardcoded to have a few palcode instructions
+    // Map the QEMU PALcode rom only for now
+    memory.mapROM(0xfffffc0000000000, Cepums::parseElf(std::ifstream("palcode-clipper", std::ios::binary)));
+
+    size_t test_counter = 0;
 
     LOG_INFO("Cepums-Alpha starting up ...");
     while (true) {
         processor.execute(memory);
-        LOG_DEBUG("one instruction done");
-        return 0;
+        test_counter++;
+
+        if (test_counter > 20) {
+            return 0;
+        }
     }
 
     return 0;

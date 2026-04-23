@@ -66,6 +66,7 @@ class Processor {
 
     // PAL
     void ins$call_pal(Memory& m, uint32_t function);
+    void ins$mtpr(Memory& m, Register source, uint16_t index);
 
     // Branch instructions
     void ins$br(Memory& m, Register reg, uint32_t branch_displacement);
@@ -73,10 +74,14 @@ class Processor {
    private:
     // Program Counter register
     uint64_t m_pc{0xfffffc0000000000}; // reset address for PAL
+    bool m_in_pal_mode{true}; // start in PAL mode
 
     // Lock registers
     uint64_t m_lock_flag_register{0};
     uint64_t m_locked_physical_address_register{0};
+
+    // Internal Processor Registers (IPRs). Very PAL-specific
+    uint64_t m_iprs[64];
 
     // Processor Cycle Counter register
     uint32_t m_pcc_cnt{0}; // lower 32-bits, increments and overflows

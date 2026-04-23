@@ -27,9 +27,10 @@ void Processor::execute(Memory& m) {
     uint32_t branch_displacement = EXTRACT_BRANCH_DISPLACEMENT(instruction_doubleword);
     uint32_t pal_function = EXTRACT_PAL_FUNCTION(instruction_doubleword);
 
-    LOG_DEBUG("    Register A: {0:x}h  0b{0:b}", register_a);
-    LOG_DEBUG("    Register B: {0:x}h  0b{0:b}", register_b);
+    LOG_DEBUG("    Register A: {0}  0b{0:b}", register_a);
+    LOG_DEBUG("    Register B: {0}  0b{0:b}", register_b);
     LOG_DEBUG("    branch_displacement: {0:x}h  0b{0:b}", branch_displacement);
+    LOG_DEBUG("    pal_function: {0:x}h  0b{0:b}", pal_function);
 
     // TODO: wikipedia has different bits defined, need to update them here and the above macros
 
@@ -55,6 +56,9 @@ void Processor::execute(Memory& m) {
         case Instruction::LDAH:
             return ins$ldah(m, Cepums::Register(register_a), Cepums::Register(register_b), memory_displacement);
         case Instruction::BR: return ins$br(m, Cepums::Register(register_a), branch_displacement);
+        case Instruction::MTPR:
+            return ins$mtpr(m, Cepums::Register(register_b),
+                            memory_displacement); // register_a and register_b must be the same? but they're not for me
         default: ILLEGAL_INSTRUCTION(); break;
     }
 }
@@ -136,31 +140,45 @@ void Processor::setFloatRegister(const Register& reg, const double& value) {
 }
 
 void Processor::ins$lda(Memory& m, Register destination, Register source, uint16_t memory_disp) {
+    LOG_INFO("ins$lda");
     int16_t signed_disp = memory_disp;
     uint64_t address = getIntegerRegisterValue(source) + signed_disp;
     setIntegerRegister(destination, address);
 }
 
 void Processor::ins$ldah(Memory& m, Register destination, Register source, uint16_t memory_disp) {
+    LOG_INFO("ins$ldah");
     int16_t signed_disp = memory_disp * 65536;
     uint64_t address = getIntegerRegisterValue(source) + signed_disp;
     setIntegerRegister(destination, address);
 }
 
 void Processor::ins$call_pal(Memory& m, uint32_t function) {
-    LOG_DEBUG("ins$call_pal with function {0:x}h", function);
+    LOG_INFO("ins$call_pal");
+    LOG_DEBUG("[call_pal]    ins$call_pal with function {0:x}h", function);
     TODO();
 }
 
 void Processor::ins$br(Memory& m, Register reg, uint32_t branch_displacement) {
-    LOG_DEBUG("branch_displacement: {0:x}h", branch_displacement);
-    LOG_DEBUG("reg value: {0:x}h", getIntegerRegisterValue(reg));
-    LOG_DEBUG(" gonna modify reg: {0}", reg.registerBits());
+    LOG_INFO("ins$br");
+    LOG_DEBUG("[br]    branch_displacement: {0:x}h", branch_displacement);
+    LOG_DEBUG("[br]    reg value: {0:x}h", getIntegerRegisterValue(reg));
+    LOG_DEBUG("[br]    gonna modify reg: {0}", reg.registerBits());
     setIntegerRegister(reg, m_pc);
     const auto new_displ = signExtendBranchDisplacementToQuad(branch_displacement);
-    LOG_DEBUG("old PC: {0:x}h", m_pc);
+    LOG_DEBUG("[br]    old PC: {0:x}h", m_pc);
     m_pc = m_pc + 4 * new_displ;
-    LOG_DEBUG("new PC: {0:x}h", m_pc);
+    LOG_DEBUG("[br]    new PC: {0:x}h", m_pc);
+}
+
+void Processor::ins$mtpr(Memory& m, Register source, uint16_t index) {
+    LOG_INFO("mtpr$br");
+    LOG_DEBUG("[mtpr]    index: {0}", index);
+    if (index == 50) {
+        m_iprs[index] = getIntegerRegisterValue(source);
+    } else {
+        TODO();
+    }
 }
 
 } // namespace Cepums

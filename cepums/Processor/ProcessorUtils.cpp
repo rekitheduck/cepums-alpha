@@ -11,6 +11,7 @@ Instruction decodeInstruction(uint8_t opcode) {
         case 0x00: return Instruction::CallPal;
         case 0x08: return Instruction::LDA;
         case 0x09: return Instruction::LDAH;
+        case 0x1D: return Instruction::MTPR; // Move To Processor Register (in PAL)
         case 0x30: return Instruction::BR; // Unconditional branch
     }
     VERIFY_NOT_REACHED();

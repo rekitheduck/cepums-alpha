@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 namespace Cepums {
 
@@ -232,6 +233,10 @@ enum class InstructionFormat { Invalid, Memory, Branch, Operate, FloatPointOpera
 
 Instruction decodeInstruction(uint8_t opcode);
 
+Instruction decodeFunctionedInstruction(Instruction instr, uint16_t function);
+
 InstructionFormat instructionFormat(Instruction instruction);
+
+std::string instructionMnemonic(Instruction instruction);
 
 } // namespace Cepums

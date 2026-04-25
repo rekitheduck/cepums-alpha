@@ -59,10 +59,10 @@
         LOG_CRITICAL("TODO hit in {0}:{1}", __FILE__, __LINE__); \
         abort();                                                 \
     }
-#define TODO_INSTRUCTION()                                                            \
-    {                                                                                 \
-        LOG_CRITICAL("Unimplemented instruction hit in {0}:{1}", __FILE__, __LINE__); \
-        abort();                                                                      \
+#define TODO_INSTRUCTION(x, y)                                                                                        \
+    {                                                                                                                 \
+        LOG_CRITICAL("Unimplemented instruction \"{2}\" opcode \"{3:x}h\" hit in {0}:{1}", __FILE__, __LINE__, x, y); \
+        abort();                                                                                                      \
     }
 #endif
 
@@ -89,11 +89,13 @@
 #define EXTRACT_OPCODE(doubleword) (doubleword >> 26) & 0x3F; // 6 bits
 #define EXTRACT_REGISTER_A(doubleword) (doubleword >> 21) & 0x1F; // 5 bits
 #define EXTRACT_REGISTER_B(doubleword) (doubleword >> 16) & 0x1F; // 5 bits
-#define EXTRACT_FUNCTION(doubleword) (doubleword >> 1) & 0xFFFF; // 15-bits
-#define EXTRACT_RC(doubleword) doubleword & 0x1; // 1-bit
-#define EXTRACT_MEMORY_DISPLACEMENT(doubleword) doubleword & 0xFFFF; // 16-bits
-#define EXTRACT_BRANCH_DISPLACEMENT(doubleword) doubleword & 0x1FFFFF; // 21-bits
-#define EXTRACT_PAL_FUNCTION(doubleword) doubleword & 0x03FFFFFF; // 26-bits
+#define EXTRACT_REGISTER_C(doubleword) doubleword & 0x1F; // 5 bits
+#define EXTRACT_INTEGER_OPERATE_FUNCTION(doubleword) (doubleword >> 5) & 0x7F // 7 bits
+#define EXTRACT_INTEGER_OPERATE_LITERAL(doubleword) (doubleword >> 13) & 0xFF // 8 bits
+#define EXTRACT_INTEGER_OPERATE_IS_LITERAL_BIT(doubleword) (doubleword >> 12) & 0x1 // 1 bit
+#define EXTRACT_MEMORY_DISPLACEMENT(doubleword) doubleword & 0xFFFF; // 16 bits
+#define EXTRACT_BRANCH_DISPLACEMENT(doubleword) doubleword & 0x1FFFFF; // 21 bits
+#define EXTRACT_PAL_FUNCTION(doubleword) doubleword & 0x03FFFFFF; // 26 bits
 
 namespace Cepums {
 

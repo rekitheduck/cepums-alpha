@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 
+#include "Core.h"
 #include "Memory.h"
 #include "Register.h"
 
@@ -63,6 +64,9 @@ class Processor {
     void ins$ustw(Memory& m, uint64_t address_dest, Register source); // Unaligned word
     void ins$ustl(Memory& m, uint64_t address_dest, Register source); // Unaligned long
     void ins$ustq(Memory& m, uint64_t address_dest, Register source); // Unaligned quad
+
+    // Integer shift instructions (INTS)
+    void ins$sll(Memory& m, Register input_one, Scope<Operand> input_two, Register output);
 
     // PAL
     void ins$call_pal(Memory& m, uint32_t function);

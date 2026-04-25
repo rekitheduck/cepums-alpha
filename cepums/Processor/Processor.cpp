@@ -4,6 +4,8 @@
 #include "Log.h"
 #include "ProcessorUtils.h"
 
+#include "Literal.h"
+
 namespace Cepums {
 void Processor::reset() {}
 
@@ -21,8 +23,10 @@ void Processor::execute(Memory& m) {
     uint8_t opcode = EXTRACT_OPCODE(instruction_doubleword); // 6 bit opcode
     uint8_t register_a = EXTRACT_REGISTER_A(instruction_doubleword);
     uint8_t register_b = EXTRACT_REGISTER_B(instruction_doubleword);
-    uint16_t function = EXTRACT_FUNCTION(instruction_doubleword);
-    uint8_t rc = EXTRACT_RC(instruction_doubleword);
+    uint8_t register_c = EXTRACT_REGISTER_C(instruction_doubleword);
+    uint16_t integer_operate_function = EXTRACT_INTEGER_OPERATE_FUNCTION(instruction_doubleword);
+    uint16_t integer_operate_literal = EXTRACT_INTEGER_OPERATE_LITERAL(instruction_doubleword);
+    uint8_t is_integer_operate_literal = EXTRACT_INTEGER_OPERATE_IS_LITERAL_BIT(instruction_doubleword);
     uint16_t memory_displacement = EXTRACT_MEMORY_DISPLACEMENT(instruction_doubleword);
     uint32_t branch_displacement = EXTRACT_BRANCH_DISPLACEMENT(instruction_doubleword);
     uint32_t pal_function = EXTRACT_PAL_FUNCTION(instruction_doubleword);
@@ -31,11 +35,13 @@ void Processor::execute(Memory& m) {
     LOG_DEBUG("    Register B: {0}  0b{0:b}", register_b);
     LOG_DEBUG("    branch_displacement: {0:x}h  0b{0:b}", branch_displacement);
     LOG_DEBUG("    pal_function: {0:x}h  0b{0:b}", pal_function);
+    LOG_DEBUG("    integer_operate_function: {0:x}h ", integer_operate_function);
+    LOG_DEBUG("    integer_operate_literal: {0:x}h ", integer_operate_literal);
 
     // TODO: wikipedia has different bits defined, need to update them here and the above macros
 
     // Operate format uses:
-    // opcode, RA, RB, Function, RC
+    // opcode, RA, RB, integer_operate_function, RC
 
     // Memory format uses:
     // opcode, RA, RB, Memory displacement
@@ -47,9 +53,10 @@ void Processor::execute(Memory& m) {
     // opcode, PAL function
 
     LOG_DEBUG("opcode: {0:x}h", opcode);
+    const auto instruction = decodeInstruction(opcode);
 
     // opcode is the first 6 bits, so it can hold 64 distinct values which means 64 instructions
-    switch (decodeInstruction(opcode)) {
+    switch (instruction) {
         case Instruction::CallPal: return ins$call_pal(m, pal_function);
         case Instruction::LDA:
             return ins$lda(m, Cepums::Register(register_a), Cepums::Register(register_b), memory_displacement);
@@ -59,8 +66,24 @@ void Processor::execute(Memory& m) {
         case Instruction::MTPR:
             return ins$mtpr(m, Cepums::Register(register_b),
                             memory_displacement); // register_a and register_b must be the same? but they're not for me
+        case Instruction::INTS: {
+            // Integer Shift Instructions
+            const auto integer_operate_opcode = decodeFunctionedInstruction(instruction, integer_operate_function);
+            switch (integer_operate_opcode) {
+                case Instruction::SLL:
+                    if (is_integer_operate_literal == 0) {
+                        return ins$sll(m, Cepums::Register(register_a), createScope<Cepums::Register>(register_b),
+                                       Cepums::Register(register_c));
+                    } else {
+                        return ins$sll(m, Cepums::Register(register_a),
+                                       createScope<Cepums::Literal>(integer_operate_literal),
+                                       Cepums::Register(register_c));
+                    }
+                default: TODO_INSTRUCTION(instructionMnemonic(integer_operate_opcode), opcode); return;
+            }
+        }
         case Instruction::Invalid: ILLEGAL_INSTRUCTION(); return;
-        default: TODO_INSTRUCTION(); return;
+        default: TODO_INSTRUCTION(instructionMnemonic(instruction), opcode); return;
     }
 }
 
@@ -152,6 +175,17 @@ void Processor::ins$ldah(Memory& m, Register destination, Register source, uint1
     int16_t signed_disp = memory_disp * 65536;
     uint64_t address = getIntegerRegisterValue(source) + signed_disp;
     setIntegerRegister(destination, address);
+}
+
+void Processor::ins$sll(Memory& m, Register input_one, Scope<Operand> input_two, Register output) {
+    if (input_two->isRegister()) {
+        LOG_INFO("ins$sll r{0}, r{1}, r{2}", input_one.registerBits(),
+                 static_cast<Register*>(input_two.get())->registerBits(), output.registerBits());
+    } else {
+        LOG_INFO("ins$sll r{0}, {1}h, r{2}", input_one.registerBits(), input_two->value(this), output.registerBits());
+    }
+
+    m_gp_registers[output.registerBits()] = input_one.value(this) << input_two->value(this);
 }
 
 void Processor::ins$call_pal(Memory& m, uint32_t function) {

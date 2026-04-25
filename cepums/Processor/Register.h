@@ -1,17 +1,18 @@
-#include <cstdint>
+#pragma once
+
+#include "Operand.h"
 
 namespace Cepums {
 
-class Register {
+class Register : public Operand {
    public:
     Register(uint8_t register_bits) { m_registerBits = register_bits; }
 
-    bool isInteger() const { return m_is_integer; }
+    virtual bool isRegister() const override { return true; }
     uint8_t registerBits() const { return m_registerBits; }
-    uint64_t value();
+    virtual uint64_t value(Processor* processor) override;
 
    private:
-    bool m_is_integer{true};
     uint64_t m_registerBits{40};
 };
 } // namespace Cepums

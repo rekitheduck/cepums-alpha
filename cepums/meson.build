@@ -4,7 +4,8 @@ cepums_src = [
     'Memory.cpp',
     'Processor/Processor.cpp',
     'Processor/ProcessorUtils.cpp',
-    'Utilities/ELFUtils.cpp'
+    'Processor/Register.cpp',
+    'Utilities/ELFUtils.cpp',
 ]
 
-cepums = executable('cepums-alpha', cepums_src, dependencies : [fmt_dep, spdlog_dep])
+cepums = executable('cepums-alpha', cepums_src, dependencies: [fmt_dep, spdlog_dep])

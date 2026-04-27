@@ -91,6 +91,22 @@ void Processor::execute(Memory& m) {
                     EXTRACT_HW_LD_QUAD_BIT(instruction_doubleword), EXTRACT_HW_LD_WRTCK_BIT(instruction_doubleword),
                     EXTRACT_HW_LD_ALT_BIT(instruction_doubleword), EXTRACT_HW_LD_PHYS_BIT(instruction_doubleword)));
         }
+        case Instruction::INTL: {
+            // Integer Logical Instructions
+            const auto integer_operate_opcode = decodeFunctionedInstruction(instruction, integer_operate_function);
+            switch (integer_operate_opcode) {
+                case Instruction::AND:
+                    if (is_integer_operate_literal == 0) {
+                        return ins$and(m, Cepums::Register(register_a), createScope<Cepums::Register>(register_b),
+                                       Cepums::Register(register_c));
+                    } else {
+                        return ins$and(m, Cepums::Register(register_a),
+                                       createScope<Cepums::Literal>(integer_operate_literal),
+                                       Cepums::Register(register_c));
+                    }
+                default: TODO_INSTRUCTION(instructionMnemonic(integer_operate_opcode), opcode); return;
+            }
+        }
         case Instruction::Invalid: ILLEGAL_INSTRUCTION(); return;
         default: TODO_INSTRUCTION(instructionMnemonic(instruction), opcode); return;
     }
@@ -188,13 +204,22 @@ void Processor::ins$ldah(Memory& m, Register destination, Register source, uint1
 
 void Processor::ins$sll(Memory& m, Register input_one, Scope<Operand> input_two, Register output) {
     if (input_two->isRegister()) {
-        LOG_INFO("ins$sll r{0}, r{1}, r{2}", input_one.registerBits(),
-                 static_cast<Register*>(input_two.get())->registerBits(), output.registerBits());
+        LOG_INFO("ins$sll r{0}, r{1}, r{2}", output.registerBits(), input_one.registerBits(),
+                 static_cast<Register*>(input_two.get())->registerBits());
     } else {
-        LOG_INFO("ins$sll r{0}, {1}h, r{2}", input_one.registerBits(), input_two->value(this), output.registerBits());
+        LOG_INFO("ins$sll r{0}, r{1}, {2:x}h", output.registerBits(), input_one.registerBits(), input_two->value(this));
     }
-
     m_gp_registers[output.registerBits()] = input_one.value(this) << input_two->value(this);
+}
+
+void Processor::ins$and(Memory& m, Register input_one, Scope<Operand> input_two, Register output) {
+    if (input_two->isRegister()) {
+        LOG_INFO("ins$and r{0}, r{1}, r{2}", output.registerBits(), input_one.registerBits(),
+                 static_cast<Register*>(input_two.get())->registerBits());
+    } else {
+        LOG_INFO("ins$and r{0}, r{1}, {2:x}h", output.registerBits(), input_one.registerBits(), input_two->value(this));
+    }
+    m_gp_registers[output.registerBits()] = input_one.value(this) & input_two->value(this);
 }
 
 void Processor::ins$call_pal(Memory& m, uint32_t function) {

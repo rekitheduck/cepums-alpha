@@ -78,6 +78,9 @@ class Processor {
     // Integer shift instructions (INTS)
     void ins$sll(Memory& m, Register input_one, Scope<Operand> input_two, Register output);
 
+    // Integer logical instructions (INTL)
+    void ins$and(Memory& m, Register input_one, Scope<Operand> input_two, Register output);
+
     // PAL
     void ins$call_pal(Memory& m, uint32_t function);
     void ins$mtpr(Memory& m, Register source, uint16_t index);

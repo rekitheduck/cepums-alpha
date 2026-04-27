@@ -81,6 +81,9 @@ class Processor {
     // Integer logical instructions (INTL)
     void ins$and(Memory& m, Register input_one, Scope<Operand> input_two, Register output);
 
+    // Integer arithmetic instructions (INTA)
+    void ins$addq(Memory& m, Register input_one, Scope<Operand> input_two, Register output);
+
     // PAL
     void ins$call_pal(Memory& m, uint32_t function);
     void ins$mtpr(Memory& m, Register source, uint16_t index);

@@ -372,7 +372,7 @@ Instruction decodeFunctionedInstruction(Instruction instr, uint16_t function) {
             }
             return Instruction::Invalid;
 
-        default: ILLEGAL_INSTRUCTION();
+        default: return Instruction::Invalid;
     }
 
     return Instruction::Invalid;

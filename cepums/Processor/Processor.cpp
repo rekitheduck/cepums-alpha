@@ -55,6 +55,8 @@ void Processor::execute(Memory& m) {
     LOG_DEBUG("opcode: {0:x}h", opcode);
     const auto instruction = decodeInstruction(opcode);
 
+    const auto integer_operate_opcode = decodeFunctionedInstruction(instruction, integer_operate_function);
+
     // opcode is the first 6 bits, so it can hold 64 distinct values which means 64 instructions
     switch (instruction) {
         case Instruction::CallPal: return ins$call_pal(m, pal_function);
@@ -68,7 +70,6 @@ void Processor::execute(Memory& m) {
                             memory_displacement); // register_a and register_b must be the same? but they're not for me
         case Instruction::INTS: {
             // Integer Shift Instructions
-            const auto integer_operate_opcode = decodeFunctionedInstruction(instruction, integer_operate_function);
             switch (integer_operate_opcode) {
                 case Instruction::SLL:
                     if (is_integer_operate_literal == 0) {
@@ -93,7 +94,6 @@ void Processor::execute(Memory& m) {
         }
         case Instruction::INTL: {
             // Integer Logical Instructions
-            const auto integer_operate_opcode = decodeFunctionedInstruction(instruction, integer_operate_function);
             switch (integer_operate_opcode) {
                 case Instruction::AND:
                     if (is_integer_operate_literal == 0) {
@@ -103,6 +103,21 @@ void Processor::execute(Memory& m) {
                         return ins$and(m, Cepums::Register(register_a),
                                        createScope<Cepums::Literal>(integer_operate_literal),
                                        Cepums::Register(register_c));
+                    }
+                default: TODO_INSTRUCTION(instructionMnemonic(integer_operate_opcode), opcode); return;
+            }
+        }
+        case Instruction::INTA: {
+            // Integer Arithmetic Instructions
+            switch (integer_operate_opcode) {
+                case Instruction::ADDQ:
+                    if (is_integer_operate_literal == 0) {
+                        return ins$addq(m, Cepums::Register(register_a), createScope<Cepums::Register>(register_b),
+                                        Cepums::Register(register_c));
+                    } else {
+                        return ins$addq(m, Cepums::Register(register_a),
+                                        createScope<Cepums::Literal>(integer_operate_literal),
+                                        Cepums::Register(register_c));
                     }
                 default: TODO_INSTRUCTION(instructionMnemonic(integer_operate_opcode), opcode); return;
             }
@@ -218,6 +233,17 @@ void Processor::ins$and(Memory& m, Register input_one, Scope<Operand> input_two,
                  static_cast<Register*>(input_two.get())->registerBits());
     } else {
         LOG_INFO("ins$and r{0}, r{1}, {2:x}h", output.registerBits(), input_one.registerBits(), input_two->value(this));
+    }
+    m_gp_registers[output.registerBits()] = input_one.value(this) & input_two->value(this);
+}
+
+void Processor::ins$addq(Memory& m, Register input_one, Scope<Operand> input_two, Register output) {
+    if (input_two->isRegister()) {
+        LOG_INFO("ins$addq r{0}, r{1}, r{2}", output.registerBits(), input_one.registerBits(),
+                 static_cast<Register*>(input_two.get())->registerBits());
+    } else {
+        LOG_INFO("ins$addq r{0}, r{1}, {2:x}h", output.registerBits(), input_one.registerBits(),
+                 input_two->value(this));
     }
     m_gp_registers[output.registerBits()] = input_one.value(this) & input_two->value(this);
 }

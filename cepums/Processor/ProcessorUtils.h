@@ -169,7 +169,7 @@ enum class Instruction {
 
     PAL2,
     JSR,
-    PAL3,
+    HW_LD,
 
     FPTI, // Uses function field, actual instructions are right after this:
     SEXTB,

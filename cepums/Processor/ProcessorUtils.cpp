@@ -31,7 +31,7 @@ Instruction decodeInstruction(uint8_t opcode) {
         case 0x18: return Instruction::MISC; // Uses function field, must be decoded further
         case 0x19: return Instruction::PAL2;
         case 0x1A: return Instruction::JSR;
-        case 0x1B: return Instruction::PAL3;
+        case 0x1B: return Instruction::HW_LD;
         case 0x1C: return Instruction::FPTI; // Uses function field, must be decoded further
         case 0x1D: return Instruction::MTPR; // Move To Processor Register (in PAL)
         case 0x1E: return Instruction::PAL4;
@@ -138,7 +138,7 @@ InstructionFormat instructionFormat(Instruction instr) {
         // CallPal
         case Instruction::CallPal:
         case Instruction::PAL2:
-        case Instruction::PAL3:
+        case Instruction::HW_LD: // Aka PAL1B
         case Instruction::MTPR: // I think I can keep this here?
         case Instruction::PAL4:
         case Instruction::PAL5: return InstructionFormat::PALcode;
@@ -533,7 +533,7 @@ std::string instructionMnemonic(Instruction instr) {
         case Instruction::WH64EN: return "wh64en";
         case Instruction::PAL2: return "pal2";
         case Instruction::JSR: return "jsr3";
-        case Instruction::PAL3: return "pal3";
+        case Instruction::HW_LD: return "hw_ld"; // PAL1B
         case Instruction::FPTI: return "fpti";
         case Instruction::SEXTB: return "sextb";
         case Instruction::SEXTW: return "sextw";

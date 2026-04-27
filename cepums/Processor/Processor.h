@@ -4,10 +4,20 @@
 #include <cstdint>
 
 #include "Core.h"
+#include "Literal.h"
 #include "Memory.h"
 #include "Register.h"
 
 namespace Cepums {
+
+struct HW_LD_Flags {
+    bool lock_bit{false};
+    bool vpte_bit{false};
+    bool quad_bit{false};
+    bool wrtck_bit{false};
+    bool alt_bit{false};
+    bool phys_bit{false};
+};
 
 class Processor {
    public:
@@ -71,6 +81,7 @@ class Processor {
     // PAL
     void ins$call_pal(Memory& m, uint32_t function);
     void ins$mtpr(Memory& m, Register source, uint16_t index);
+    void ins$hw_ld(Memory& m, Register destination, Register base, Literal displacement, HW_LD_Flags flags);
 
     // Branch instructions
     void ins$br(Memory& m, Register reg, uint32_t branch_displacement);

@@ -82,6 +82,15 @@ void Processor::execute(Memory& m) {
                 default: TODO_INSTRUCTION(instructionMnemonic(integer_operate_opcode), opcode); return;
             }
         }
+        case Instruction::HW_LD: {
+            const int16_t signed_displ_10 = EXTRACT_HW_LD_DISPL_10(instruction_doubleword);
+            return ins$hw_ld(
+                m, Cepums::Register(register_a), Cepums::Register(register_b), Cepums::Literal(signed_displ_10),
+                Cepums::HW_LD_Flags(
+                    EXTRACT_HW_LD_LOCK_BIT(instruction_doubleword), EXTRACT_HW_LD_VPTE_BIT(instruction_doubleword),
+                    EXTRACT_HW_LD_QUAD_BIT(instruction_doubleword), EXTRACT_HW_LD_WRTCK_BIT(instruction_doubleword),
+                    EXTRACT_HW_LD_ALT_BIT(instruction_doubleword), EXTRACT_HW_LD_PHYS_BIT(instruction_doubleword)));
+        }
         case Instruction::Invalid: ILLEGAL_INSTRUCTION(); return;
         default: TODO_INSTRUCTION(instructionMnemonic(instruction), opcode); return;
     }
@@ -194,6 +203,33 @@ void Processor::ins$call_pal(Memory& m, uint32_t function) {
     TODO();
 }
 
+void Processor::ins$mtpr(Memory& m, Register source, uint16_t index) {
+    LOG_INFO("ins$mtpr r{0}, {1}", source.registerBits(), index);
+    LOG_DEBUG("[mtpr]    index: {0}", index);
+    switch (index) {
+        case 0: // Processor State flag
+        case 50: m_iprs[index] = getIntegerRegisterValue(source); break;
+        default: TODO(); break;
+    }
+}
+
+void Processor::ins$hw_ld(Memory& m, Register destination, Register base, Literal displacement, HW_LD_Flags flags) {
+    LOG_INFO("ins$hw_ld ");
+    const uint64_t result = static_cast<uint64_t>(static_cast<int64_t>(base.value(this)) + displacement.value(this));
+    LOG_DEBUG("    result_address: {0:x}h", result);
+    LOG_DEBUG("    lock_bit: {0:b}", flags.lock_bit);
+    LOG_DEBUG("    vpte_bit: {0:b}", flags.vpte_bit);
+    LOG_DEBUG("    quad_bit: {0:b}", flags.quad_bit);
+    LOG_DEBUG("    wrtck_bit: {0:b}", flags.wrtck_bit);
+    LOG_DEBUG("    alt_bit: {0:b}", flags.alt_bit);
+    LOG_DEBUG("    phys_bit: {0:b}", flags.phys_bit);
+
+    // Tsunami/Typhoon chipset Cchip MISC CSR
+    if (result == 0x801a0000080) {
+        m_gp_registers[destination.registerBits()] = 0x800000000; // return a Typhoon chip?
+    }
+}
+
 void Processor::ins$br(Memory& m, Register reg, uint32_t branch_displacement) {
     LOG_INFO("ins$br");
     LOG_DEBUG("[br]    branch_displacement: {0:x}h", branch_displacement);
@@ -204,16 +240,6 @@ void Processor::ins$br(Memory& m, Register reg, uint32_t branch_displacement) {
     LOG_DEBUG("[br]    old PC: {0:x}h", m_pc);
     m_pc = m_pc + 4 * new_displ;
     LOG_DEBUG("[br]    new PC: {0:x}h", m_pc);
-}
-
-void Processor::ins$mtpr(Memory& m, Register source, uint16_t index) {
-    LOG_INFO("ins$mtpr r{0}, {1}", source.registerBits(), index);
-    LOG_DEBUG("[mtpr]    index: {0}", index);
-    switch (index) {
-        case 0: // Processor State flag
-        case 50: m_iprs[index] = getIntegerRegisterValue(source); break;
-        default: TODO(); break;
-    }
 }
 
 } // namespace Cepums

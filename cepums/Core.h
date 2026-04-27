@@ -97,6 +97,15 @@
 #define EXTRACT_BRANCH_DISPLACEMENT(doubleword) doubleword & 0x1FFFFF; // 21 bits
 #define EXTRACT_PAL_FUNCTION(doubleword) doubleword & 0x03FFFFFF; // 26 bits
 
+// Some PAL functions do some funky stuff and want their own bit parsing logic
+#define EXTRACT_HW_LD_DISPL_10(doubleword) doubleword & 0x3FF; // 10 bits
+#define EXTRACT_HW_LD_LOCK_BIT(doubleword) (doubleword >> 10) & 0x1 // 1 bit
+#define EXTRACT_HW_LD_VPTE_BIT(doubleword) (doubleword >> 11) & 0x1 // 1 bit
+#define EXTRACT_HW_LD_QUAD_BIT(doubleword) (doubleword >> 12) & 0x1 // 1 bit
+#define EXTRACT_HW_LD_WRTCK_BIT(doubleword) (doubleword >> 13) & 0x1 // 1 bit
+#define EXTRACT_HW_LD_ALT_BIT(doubleword) (doubleword >> 14) & 0x1 // 1 bit
+#define EXTRACT_HW_LD_PHYS_BIT(doubleword) (doubleword >> 15) & 0x1 // 1 bit
+
 namespace Cepums {
 
 // I don't know how this works

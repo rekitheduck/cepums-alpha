@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
         processor.execute(memory);
         test_counter++;
 
-        if (test_counter > 20) {
+        if (test_counter > 50) {
             return 0;
         }
     }

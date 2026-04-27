@@ -84,6 +84,9 @@ class Processor {
     // Integer arithmetic instructions (INTA)
     void ins$addq(Memory& m, Register input_one, Scope<Operand> input_two, Register output);
 
+    // Integer multiply instructions
+    void ins$mull(Memory& m, Register input_one, Scope<Operand> input_two, Register output);
+
     // PAL
     void ins$call_pal(Memory& m, uint32_t function);
     void ins$mtpr(Memory& m, Register source, uint16_t index);
@@ -91,6 +94,8 @@ class Processor {
 
     // Branch instructions
     void ins$br(Memory& m, Register reg, uint32_t branch_displacement);
+    void ins$bne(Memory& m, Register input_one, Literal branch_displacement);
+    void ins$jmp(Memory& m, Register input_one, Register input_two);
 
    private:
     // Program Counter register

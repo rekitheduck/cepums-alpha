@@ -114,9 +114,9 @@ namespace Cepums {
     return (byte ^ mask) - mask;
 }
 
-[[maybe_unused]] static uint64_t signExtendBranchDisplacementToQuad(uint32_t displ) {
-    uint64_t mask = 1u << (20 - 1);
-    return (displ ^ mask) - mask;
+[[maybe_unused]] static int64_t signExtendBranchDisplacementToQuad(uint32_t displ) {
+    int64_t mask = 1u << (22 - 1);
+    return ((static_cast<int64_t>(displ << 2) ^ mask) - mask);
 }
 
 [[maybe_unused]] static char halfByteToHexChar(uint8_t halfbyte) {

@@ -15,6 +15,8 @@ void Processor::execute(Memory& m) {
     // Fetch instruction (32-bits)
     uint32_t instruction_doubleword = m.readDouble(m_pc);
     LOG_DEBUG("Instruction data loaded: {0:x}h  0b{0:b}", instruction_doubleword);
+    LOG_DEBUG("instructions executed: {0}", m_pcc_cnt);
+    m_pcc_cnt++;
 
     // Increment program counter
     m_pc += 4;
@@ -64,7 +66,8 @@ void Processor::execute(Memory& m) {
             return ins$lda(m, Cepums::Register(register_a), Cepums::Register(register_b), memory_displacement);
         case Instruction::LDAH:
             return ins$ldah(m, Cepums::Register(register_a), Cepums::Register(register_b), memory_displacement);
-        case Instruction::BR: return ins$br(m, Cepums::Register(register_a), branch_displacement);
+        case Instruction::BR:
+        case Instruction::BSR: return ins$br(m, Cepums::Register(register_a), branch_displacement);
         case Instruction::MTPR:
             return ins$mtpr(m, Cepums::Register(register_b),
                             memory_displacement); // register_a and register_b must be the same? but they're not for me
@@ -122,8 +125,39 @@ void Processor::execute(Memory& m) {
                 default: TODO_INSTRUCTION(instructionMnemonic(integer_operate_opcode), opcode); return;
             }
         }
+        case Instruction::INTM: {
+            // Integer Multiply Instructions
+            switch (integer_operate_opcode) {
+                case Instruction::MULL:
+                    if (is_integer_operate_literal == 0) {
+                        return ins$mull(m, Cepums::Register(register_a), createScope<Cepums::Register>(register_b),
+                                        Cepums::Register(register_c));
+                    } else {
+                        return ins$mull(m, Cepums::Register(register_a),
+                                        createScope<Cepums::Literal>(integer_operate_literal),
+                                        Cepums::Register(register_c));
+                    }
+                default: TODO_INSTRUCTION(instructionMnemonic(integer_operate_opcode), opcode); return;
+            }
+        }
+        case Instruction::JSR: {
+            // TODO: use type hints to at least log the correct used mnemonic
+            return ins$jmp(m, Cepums::Register(register_a), Cepums::Register(register_b));
+        }
+        case Instruction::BNE: {
+            return ins$bne(m, Cepums::Register(register_a), Literal(branch_displacement));
+        }
         case Instruction::Invalid: ILLEGAL_INSTRUCTION(); return;
-        default: TODO_INSTRUCTION(instructionMnemonic(instruction), opcode); return;
+        default:
+            // TODO: This might be easier in the future but need to differentiate sub function instructions in the
+            // logging
+
+            // if (integer_operate_opcode == Instruction::Invalid) {
+            TODO_INSTRUCTION(instructionMnemonic(instruction), opcode);
+            // } else {
+            // TODO_INSTRUCTION(instructionMnemonic(integer_operate_opcode), opcode);
+            // }
+            return;
     }
 }
 
@@ -248,6 +282,20 @@ void Processor::ins$addq(Memory& m, Register input_one, Scope<Operand> input_two
     m_gp_registers[output.registerBits()] = input_one.value(this) & input_two->value(this);
 }
 
+void Processor::ins$mull(Memory& m, Register input_one, Scope<Operand> input_two, Register output) {
+    if (input_two->isRegister()) {
+        LOG_INFO("ins$mull r{0}, r{1}, r{2}", output.registerBits(), input_one.registerBits(),
+                 static_cast<Register*>(input_two.get())->registerBits());
+    } else {
+        LOG_INFO("ins$mull r{0}, r{1}, {2:x}h", output.registerBits(), input_one.registerBits(),
+                 input_two->value(this));
+    }
+
+    const auto a = static_cast<uint32_t>(input_one.value(this));
+    const auto b = static_cast<uint32_t>(input_two->value(this));
+    m_gp_registers[output.registerBits()] = static_cast<uint64_t>(static_cast<int64_t>(a * b));
+}
+
 void Processor::ins$call_pal(Memory& m, uint32_t function) {
     LOG_INFO("ins$call_pal");
     LOG_DEBUG("[call_pal]    ins$call_pal with function {0:x}h", function);
@@ -259,7 +307,9 @@ void Processor::ins$mtpr(Memory& m, Register source, uint16_t index) {
     LOG_DEBUG("[mtpr]    index: {0}", index);
     switch (index) {
         case 0: // Processor State flag
-        case 50: m_iprs[index] = getIntegerRegisterValue(source); break;
+        case 50: m_iprs[index] = getIntegerRegisterValue(source); break; // RDVAL
+        case 58: m_iprs[index] = getIntegerRegisterValue(source); break; // RDUSP
+        case 59: m_iprs[index] = getIntegerRegisterValue(source); break; // ???
         default: TODO(); break;
     }
 }
@@ -283,14 +333,38 @@ void Processor::ins$hw_ld(Memory& m, Register destination, Register base, Litera
 
 void Processor::ins$br(Memory& m, Register reg, uint32_t branch_displacement) {
     LOG_INFO("ins$br");
-    LOG_DEBUG("[br]    branch_displacement: {0:x}h", branch_displacement);
-    LOG_DEBUG("[br]    reg value: {0:x}h", getIntegerRegisterValue(reg));
-    LOG_DEBUG("[br]    gonna modify reg: {0}", reg.registerBits());
+    LOG_DEBUG("    [br]    branch_displacement: {0:x}h", branch_displacement);
+    LOG_DEBUG("    [br]    reg value: {0:x}h", getIntegerRegisterValue(reg));
+    LOG_DEBUG("    [br]    gonna modify reg: {0}", reg.registerBits());
     setIntegerRegister(reg, m_pc);
-    const auto new_displ = signExtendBranchDisplacementToQuad(branch_displacement);
-    LOG_DEBUG("[br]    old PC: {0:x}h", m_pc);
-    m_pc = m_pc + 4 * new_displ;
-    LOG_DEBUG("[br]    new PC: {0:x}h", m_pc);
+    const auto sign_extended_displ = signExtendBranchDisplacementToQuad(branch_displacement);
+    LOG_DEBUG("    [br]    sign_extended_displ: {0}", sign_extended_displ);
+    LOG_DEBUG("    [br]    old PC: {0:x}h", m_pc);
+    m_pc = static_cast<uint64_t>(static_cast<int64_t>(m_pc) + sign_extended_displ);
+    LOG_DEBUG("    [br]    new PC: {0:x}h", m_pc);
+}
+
+void Processor::ins$bne(Memory& m, Register input_one, Literal branch_displacement) {
+    LOG_INFO("ins$bne r{0}", input_one.registerBits());
+    LOG_DEBUG("    [bne]    branch_displacement: {0:x}h", branch_displacement.value(this));
+    LOG_DEBUG("    [bne]    reg value: {0:x}h", getIntegerRegisterValue(input_one));
+    const auto sign_extended_displ = signExtendBranchDisplacementToQuad(branch_displacement.value(this));
+    LOG_DEBUG("    [bne]    sign_extended_displ: {0}", sign_extended_displ);
+    LOG_DEBUG("    [bne]    old PC: {0:x}h", m_pc);
+    if (getIntegerRegisterValue(input_one) != 0) {
+        m_pc = static_cast<uint64_t>(static_cast<int64_t>(m_pc) + sign_extended_displ);
+        LOG_DEBUG("    [bne]    new PC: {0:x}h", m_pc);
+    }
+}
+
+void Processor::ins$jmp(Memory& m, Register input_one, Register input_two) {
+    LOG_INFO("ins$jmp (or a variant) {0}, {1}", input_one.registerBits(), input_two.registerBits());
+
+    // We're getting value of second register just in case they're both the same
+    const auto new_pc = m_gp_registers[input_two.registerBits()] & 0xFFFFFFFFFFFFFFFC; // wipe lowest 2 bits
+    setIntegerRegister(input_one, m_pc);
+
+    m_pc = new_pc;
 }
 
 } // namespace Cepums

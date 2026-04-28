@@ -29,12 +29,12 @@ Instruction decodeInstruction(uint8_t opcode) {
         case 0x17: return Instruction::FLTL; // Uses function field, must be decoded further
 
         case 0x18: return Instruction::MISC; // Uses function field, must be decoded further
-        case 0x19: return Instruction::PAL2;
+        case 0x19: return Instruction::MFPR;
         case 0x1A: return Instruction::JSR;
-        case 0x1B: return Instruction::HW_LD;
+        case 0x1B: return Instruction::HW_LD; // PAL1B
         case 0x1C: return Instruction::FPTI; // Uses function field, must be decoded further
-        case 0x1D: return Instruction::MTPR; // Move To Processor Register (in PAL)
-        case 0x1E: return Instruction::PAL4;
+        case 0x1D: return Instruction::MTPR; // PAL1D
+        case 0x1E: return Instruction::HW_RET; // PAL1E
         case 0x1F: return Instruction::PAL5;
 
         case 0x20: return Instruction::LDF;
@@ -137,10 +137,10 @@ InstructionFormat instructionFormat(Instruction instr) {
 
         // CallPal
         case Instruction::CallPal:
-        case Instruction::PAL2:
-        case Instruction::HW_LD: // Aka PAL1B
-        case Instruction::MTPR: // I think I can keep this here?
-        case Instruction::PAL4:
+        case Instruction::MFPR:
+        case Instruction::HW_LD: // PAL1B
+        case Instruction::MTPR: // PAL1D
+        case Instruction::HW_RET: // PAL1E
         case Instruction::PAL5: return InstructionFormat::PALcode;
 
         default: ILLEGAL_INSTRUCTION();
@@ -531,8 +531,8 @@ std::string instructionMnemonic(Instruction instr) {
         case Instruction::RS: return "rs";
         case Instruction::WH64: return "wh64";
         case Instruction::WH64EN: return "wh64en";
-        case Instruction::PAL2: return "pal2";
-        case Instruction::JSR: return "jsr3";
+        case Instruction::MFPR: return "mfpr"; // PAL19
+        case Instruction::JSR: return "jsr";
         case Instruction::HW_LD: return "hw_ld"; // PAL1B
         case Instruction::FPTI: return "fpti";
         case Instruction::SEXTB: return "sextb";
@@ -555,8 +555,8 @@ std::string instructionMnemonic(Instruction instr) {
         case Instruction::MAXSW4: return "maxsw4";
         case Instruction::FTOIT: return "ftoit";
         case Instruction::FTOIS: return "ftois";
-        case Instruction::MTPR: return "mtpr";
-        case Instruction::PAL4: return "pal4";
+        case Instruction::MTPR: return "mtpr"; // PAL1D
+        case Instruction::HW_RET: return "hw_ret"; // PAL1E
         case Instruction::PAL5: return "pal5";
         case Instruction::LDF: return "ldf";
         case Instruction::LDG: return "ldg";
@@ -591,6 +591,17 @@ std::string instructionMnemonic(Instruction instr) {
         case Instruction::BGT: return "bgt";
         default: VERIFY_NOT_REACHED(); return "";
     }
+}
+
+HW_RET_Hint parseHW_RET_Hint(uint8_t two_bits) {
+    switch (two_bits) {
+        case 0b00: return HW_RET_Hint::HW_JMP;
+        case 0b01: return HW_RET_Hint::HW_JSR;
+        case 0b10: return HW_RET_Hint::HW_RET;
+        case 0b11: return HW_RET_Hint::HW_COROUTINE;
+        default: VERIFY_NOT_REACHED();
+    }
+    return HW_RET_Hint::HW_JMP;
 }
 
 }; // namespace Cepums

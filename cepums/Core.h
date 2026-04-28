@@ -86,16 +86,16 @@
 #define SET_BIT(byte, bit) byte |= BIT(bit)
 
 // Extract the last 6 bits which is an opcode
-#define EXTRACT_OPCODE(doubleword) (doubleword >> 26) & 0x3F; // 6 bits
-#define EXTRACT_REGISTER_A(doubleword) (doubleword >> 21) & 0x1F; // 5 bits
-#define EXTRACT_REGISTER_B(doubleword) (doubleword >> 16) & 0x1F; // 5 bits
-#define EXTRACT_REGISTER_C(doubleword) doubleword & 0x1F; // 5 bits
+#define EXTRACT_OPCODE(doubleword) (doubleword >> 26) & 0x3F // 6 bits
+#define EXTRACT_REGISTER_A(doubleword) (doubleword >> 21) & 0x1F // 5 bits
+#define EXTRACT_REGISTER_B(doubleword) (doubleword >> 16) & 0x1F // 5 bits
+#define EXTRACT_REGISTER_C(doubleword) doubleword & 0x1F // 5 bits
 #define EXTRACT_INTEGER_OPERATE_FUNCTION(doubleword) (doubleword >> 5) & 0x7F // 7 bits
 #define EXTRACT_INTEGER_OPERATE_LITERAL(doubleword) (doubleword >> 13) & 0xFF // 8 bits
 #define EXTRACT_INTEGER_OPERATE_IS_LITERAL_BIT(doubleword) (doubleword >> 12) & 0x1 // 1 bit
-#define EXTRACT_MEMORY_DISPLACEMENT(doubleword) doubleword & 0xFFFF; // 16 bits
-#define EXTRACT_BRANCH_DISPLACEMENT(doubleword) doubleword & 0x1FFFFF; // 21 bits
-#define EXTRACT_PAL_FUNCTION(doubleword) doubleword & 0x03FFFFFF; // 26 bits
+#define EXTRACT_MEMORY_DISPLACEMENT(doubleword) doubleword & 0xFFFF // 16 bits
+#define EXTRACT_BRANCH_DISPLACEMENT(doubleword) doubleword & 0x1FFFFF // 21 bits
+#define EXTRACT_PAL_FUNCTION(doubleword) doubleword & 0x03FFFFFF // 26 bits
 
 // Some PAL functions do some funky stuff and want their own bit parsing logic
 #define EXTRACT_HW_LD_DISPL_10(doubleword) doubleword & 0x3FF; // 10 bits
@@ -105,6 +105,9 @@
 #define EXTRACT_HW_LD_WRTCK_BIT(doubleword) (doubleword >> 13) & 0x1 // 1 bit
 #define EXTRACT_HW_LD_ALT_BIT(doubleword) (doubleword >> 14) & 0x1 // 1 bit
 #define EXTRACT_HW_LD_PHYS_BIT(doubleword) (doubleword >> 15) & 0x1 // 1 bit
+#define EXTRACT_HW_RET_HINT(doubleword) (doubleword >> 14) & 0x3 // 2 bits
+#define EXTRACT_HW_RET_STALL_BIT(doubleword) (doubleword >> 13) & 0x1 // 1 bit
+#define EXTRACT_HW_RET_DISPL_12(doubleword) doubleword & 0xFFF // 12 bits
 
 namespace Cepums {
 
@@ -114,8 +117,13 @@ namespace Cepums {
     return (byte ^ mask) - mask;
 }
 
+[[maybe_unused]] static int64_t signExtendPALDisplacementToQuad(uint32_t displ) {
+    int64_t mask = 1u << (13 - 1);
+    return ((static_cast<int64_t>(displ << 2) ^ mask) - mask);
+}
+
 [[maybe_unused]] static int64_t signExtendBranchDisplacementToQuad(uint32_t displ) {
-    int64_t mask = 1u << (22 - 1);
+    int64_t mask = 1u << (21 - 1); // uhh, was this wrong?
     return ((static_cast<int64_t>(displ << 2) ^ mask) - mask);
 }
 

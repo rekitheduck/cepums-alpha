@@ -70,7 +70,14 @@ void Processor::execute(Memory& m) {
         case Instruction::BSR: return ins$br(m, Cepums::Register(register_a), branch_displacement);
         case Instruction::MTPR:
             return ins$mtpr(m, Cepums::Register(register_b),
-                            memory_displacement); // register_a and register_b must be the same? but they're not for me
+                            memory_displacement); // TODO: verify register a is 31 !!!
+        case Instruction::MFPR: return ins$mfpr(m, Cepums::Register(register_a), memory_displacement);
+        case Instruction::HW_RET: {
+            return ins$hw_ret(m, Cepums::Register(register_b),
+                              Cepums::Literal(EXTRACT_HW_RET_DISPL_12(instruction_doubleword)),
+                              parseHW_RET_Hint(EXTRACT_HW_RET_HINT(instruction_doubleword)),
+                              EXTRACT_HW_RET_STALL_BIT(instruction_doubleword));
+        }
         case Instruction::INTS: {
             // Integer Shift Instructions
             switch (integer_operate_opcode) {
@@ -313,6 +320,21 @@ void Processor::ins$mtpr(Memory& m, Register source, uint16_t index) {
         default: TODO(); break;
     }
 }
+void Processor::ins$mfpr(Memory& m, Register source, uint16_t index) {
+    LOG_INFO("ins$mfpr r{0}, {1}", source.registerBits(), index);
+    LOG_DEBUG("    value: {0}", getIntegerRegisterValue(source));
+    switch (index) {
+        case 3: // qemu memsize
+            setIntegerRegister(source, 1024); // 1 kilobyte of ram :3
+            break;
+        case 4: // qemu kernel entry
+            setIntegerRegister(source, 0); // idk, no kernel
+        case 5: // qemu ncpus
+            setIntegerRegister(source, 1); // 1 CPU (bits 0-5) + have graphics (bit 6)
+            break;
+        default: TODO();
+    }
+}
 
 void Processor::ins$hw_ld(Memory& m, Register destination, Register base, Literal displacement, HW_LD_Flags flags) {
     LOG_INFO("ins$hw_ld ");
@@ -329,6 +351,33 @@ void Processor::ins$hw_ld(Memory& m, Register destination, Register base, Litera
     if (result == 0x801a0000080) {
         m_gp_registers[destination.registerBits()] = 0x800000000; // return a Typhoon chip?
     }
+}
+
+void Processor::ins$hw_ret(Memory& m, Register destination, Literal displacement, HW_RET_Hint hint, bool is_stall) {
+    switch (hint) {
+        case HW_RET_Hint::HW_JMP: LOG_INFO("ins$hw_jmp r{0}", destination.registerBits()); break;
+        case HW_RET_Hint::HW_JSR: LOG_INFO("ins$hw_jsr r{0}", destination.registerBits()); break;
+        case HW_RET_Hint::HW_RET: LOG_INFO("ins$hw_ret r{0}", destination.registerBits()); break;
+        case HW_RET_Hint::HW_COROUTINE: LOG_INFO("ins$hw_coroutine r{0}", destination.registerBits()); break;
+    }
+    // TODO: maybe do something with this?
+    LOG_DEBUG("    is_stall: {0}", is_stall);
+
+    LOG_DEBUG("    current r{1}: {0:x}h", getIntegerRegisterValue(destination), destination.registerBits());
+
+    const auto reg_value =
+        getIntegerRegisterValue(destination) & 0xFFFFFFFFFFFFFFFC; // wipe lowest 2 bits so we're aligned
+    const auto new_palmode = getIntegerRegisterValue(destination) & 0x1; // wipe everything but the first bit
+    const auto sign_extended_displ = signExtendPALDisplacementToQuad(displacement.value(this));
+
+    // TODO: the displacement is only used for prediction stack...
+
+    m_in_pal_mode = new_palmode;
+    LOG_DEBUG("    m_in_pall_mode: {0}", m_in_pal_mode);
+
+    LOG_DEBUG("    old_pc: {0:x}h", m_pc);
+    m_pc = reg_value;
+    LOG_DEBUG("    new_pc: {0:x}h", m_pc);
 }
 
 void Processor::ins$br(Memory& m, Register reg, uint32_t branch_displacement) {

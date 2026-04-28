@@ -6,6 +6,7 @@
 #include "Core.h"
 #include "Literal.h"
 #include "Memory.h"
+#include "ProcessorUtils.h"
 #include "Register.h"
 
 namespace Cepums {
@@ -90,7 +91,9 @@ class Processor {
     // PAL
     void ins$call_pal(Memory& m, uint32_t function);
     void ins$mtpr(Memory& m, Register source, uint16_t index);
+    void ins$mfpr(Memory& m, Register source, uint16_t index);
     void ins$hw_ld(Memory& m, Register destination, Register base, Literal displacement, HW_LD_Flags flags);
+    void ins$hw_ret(Memory& m, Register destination, Literal displacement, HW_RET_Hint hint, bool is_stall);
 
     // Branch instructions
     void ins$br(Memory& m, Register reg, uint32_t branch_displacement);

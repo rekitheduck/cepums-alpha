@@ -5,6 +5,8 @@
 
 namespace Cepums {
 
+enum class HW_RET_Hint { HW_JMP, HW_JSR, HW_RET, HW_COROUTINE };
+
 enum class Instruction {
     Invalid,
     CallPal,
@@ -167,9 +169,9 @@ enum class Instruction {
     WH64,
     WH64EN,
 
-    PAL2,
+    MFPR, // PAL2
     JSR,
-    HW_LD,
+    HW_LD, // PAL2B
 
     FPTI, // Uses function field, actual instructions are right after this:
     SEXTB,
@@ -193,8 +195,8 @@ enum class Instruction {
     FTOIT,
     FTOIS,
 
-    MTPR,
-    PAL4,
+    MTPR, // PAL1D
+    HW_RET, // PAL1E
     PAL5,
     LDF,
     LDG,
@@ -238,5 +240,7 @@ Instruction decodeFunctionedInstruction(Instruction instr, uint16_t function);
 InstructionFormat instructionFormat(Instruction instruction);
 
 std::string instructionMnemonic(Instruction instruction);
+
+HW_RET_Hint parseHW_RET_Hint(uint8_t two_bits);
 
 } // namespace Cepums

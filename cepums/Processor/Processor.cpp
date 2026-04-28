@@ -175,15 +175,12 @@ uint64_t Processor::getIntegerRegisterValue(const Register& reg) const {
         VERIFY_NOT_REACHED();
     }
 
-    LOG_DEBUG("reg_bits: {0:b}", reg.registerBits());
-
     // We have 32 registers. Last one is hardwired to 0
     if (reg.registerBits() < 31) {
         return m_gp_registers[reg.registerBits()];
     } else if (reg.registerBits() == 31) {
         return 0;
     }
-    LOG_DEBUG("getIntegerRegisterValue: bits: {0}", reg.registerBits());
 
     VERIFY_NOT_REACHED();
 
@@ -193,13 +190,13 @@ uint64_t Processor::getIntegerRegisterValue(const Register& reg) const {
 double Processor::getFloatRegisterValue(const Register& reg) const {
     // Bad type
     if (reg.isInteger() == true) {
-        LOG_DEBUG("getIntegerRegisterValue: bits: {0}", reg.registerBits());
+        LOG_DEBUG("getFloatRegisterValue: bits: {0}", reg.registerBits());
         VERIFY_NOT_REACHED();
     }
 
     // We have 32 registers. Last one is hardwired to 0
     if (reg.registerBits() < 31) {
-        LOG_DEBUG("getIntegerRegisterValue: bits: {0}", reg.registerBits());
+        LOG_DEBUG("getFloatRegisterValue: bits: {0}", reg.registerBits());
         return m_fp_registers[reg.registerBits()];
     } else if (reg.registerBits() == 31) {
         return 0.0;
@@ -245,16 +242,27 @@ void Processor::setFloatRegister(const Register& reg, const double& value) {
 }
 
 void Processor::ins$lda(Memory& m, Register destination, Register source, uint16_t memory_disp) {
-    LOG_INFO("ins$lda");
-    int16_t signed_disp = memory_disp;
-    uint64_t address = getIntegerRegisterValue(source) + signed_disp;
+    int16_t signed_disp = static_cast<int16_t>(memory_disp);
+    LOG_INFO("ins$lda r{0}, ({2:x}h)r{1}", destination.registerBits(), source.registerBits(), signed_disp);
+    uint64_t address = static_cast<uint64_t>(static_cast<int64_t>(getIntegerRegisterValue(source)) +
+                                             static_cast<int64_t>(signed_disp));
+    LOG_DEBUG("    current r{1}: {0:x}h", getIntegerRegisterValue(destination), destination.registerBits());
+    LOG_DEBUG("    current r{1}: {0:x}h", getIntegerRegisterValue(source), source.registerBits());
+    LOG_DEBUG("    new_value: {0:x}h", address);
     setIntegerRegister(destination, address);
 }
 
 void Processor::ins$ldah(Memory& m, Register destination, Register source, uint16_t memory_disp) {
-    LOG_INFO("ins$ldah");
-    int16_t signed_disp = memory_disp * 65536;
-    uint64_t address = getIntegerRegisterValue(source) + signed_disp;
+    const auto signed_disp = static_cast<int64_t>(static_cast<int16_t>(memory_disp)) * 65536;
+    LOG_INFO("ins$ldah r{0}, ({2:x}h)r{1}", destination.registerBits(), source.registerBits(), signed_disp);
+    LOG_DEBUG("    memory_disp raw: {0:x}h", static_cast<int64_t>(memory_disp));
+    LOG_DEBUG("    memory_disp raw(dec): {0}", static_cast<int64_t>(memory_disp));
+    LOG_DEBUG("    signed_disp(dec): {0}", signed_disp);
+    LOG_DEBUG("    signed_disp: {0:x}h", signed_disp);
+    uint64_t address = static_cast<uint64_t>(static_cast<int64_t>(getIntegerRegisterValue(source)) + signed_disp);
+    LOG_DEBUG("    current r{1}: {0:x}h", getIntegerRegisterValue(destination), destination.registerBits());
+    LOG_DEBUG("    current r{1}: {0:x}h", getIntegerRegisterValue(source), source.registerBits());
+    LOG_DEBUG("    new_value: {0:x}h", address);
     setIntegerRegister(destination, address);
 }
 

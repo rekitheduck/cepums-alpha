@@ -3,6 +3,9 @@
 #include "Processor/Processor.h"
 
 #include "Utilities/ELFUtils.h"
+
+#include "Disassembler.h"
+
 #include <filesystem>
 #include <iostream>
 
@@ -17,7 +20,11 @@ int main(int argc, char** argv) {
     Cepums::Processor processor;
     Cepums::Memory memory;
 
-    Cepums::parseElf(std::ifstream("palcode-clipper", std::ios::binary));
+    // Disassembler test
+
+    Cepums::Disassembler::disassembleBinary(Cepums::parseElf(std::ifstream("palcode-clipper", std::ios::binary)),
+                                            0xfffffc0000000000, "test_output.list", true);
+    return 0;
 
     // Map the QEMU PALcode rom only for now
     memory.mapROM(0xfffffc0000000000, Cepums::parseElf(std::ifstream("palcode-clipper", std::ios::binary)));

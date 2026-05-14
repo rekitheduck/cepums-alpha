@@ -1,4 +1,5 @@
 cepums_src = [
+    'Disassembler.cpp',
     'Log.cpp',
     'Main.cpp',
     'Memory.cpp',

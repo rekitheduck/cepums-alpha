@@ -2,6 +2,8 @@
 
 #include "Log.h"
 
+#define DEBUG_LOG_ELF 0
+
 namespace Cepums {
 
 std::vector<uint8_t> parseElf(std::ifstream file) {
@@ -24,6 +26,7 @@ std::vector<uint8_t> parseElf(std::ifstream file) {
         ident_hex += std::format("{:0>2x} ", header.e_ident[i]);
     }
 
+#if DEBUG_LOG_ELF
     LOG_DEBUG("e_ident: {0}", ident_hex);
 
     LOG_DEBUG("e_type: {0:x}h", header.e_type);
@@ -39,6 +42,7 @@ std::vector<uint8_t> parseElf(std::ifstream file) {
     LOG_DEBUG("e_shentsize: {0:x}h", header.e_shentsize);
     LOG_DEBUG("e_shnum: {0:x}h", header.e_shnum);
     LOG_DEBUG("e_shstrndx: {0:x}h", header.e_shstrndx);
+#endif
 
     // Some safety checks
     CEPUMS_ASSERT(header.e_ident[4] == 2, "Not a 64-bit ELF!");
@@ -52,8 +56,9 @@ std::vector<uint8_t> parseElf(std::ifstream file) {
         auto& prog_head = program_headers.emplace_back();
         file.read((char*)&prog_head, sizeof(ElfProgramHeader));
     }
-    LOG_DEBUG("Found {0} program headers", program_headers.size());
 
+#if DEBUG_LOG_ELF
+    LOG_DEBUG("Found {0} program headers", program_headers.size());
     for (const auto& h : program_headers) {
         LOG_INFO("Start of new program header!");
         LOG_DEBUG("p_type: {0:x}h", h.p_type);
@@ -65,6 +70,7 @@ std::vector<uint8_t> parseElf(std::ifstream file) {
         LOG_DEBUG("p_memsz: {0:x}h", h.p_memsz);
         LOG_DEBUG("p_align: {0:x}h", h.p_align);
     }
+#endif
 
     // There's a second header of the type PT_GNU_STACK which I think we can just ignore ^_^
     output.resize(program_headers[0].p_memsz, 0); // expand and 0-fill the entire memory range
@@ -72,9 +78,11 @@ std::vector<uint8_t> parseElf(std::ifstream file) {
     file.seekg(program_headers[0].p_offset);
     file.read((char*)output.data(), program_headers[0].p_filesz);
 
+#if DEBUG_LOG_ELF
     for (size_t i = 0; i < 50; i++) {
         LOG_DEBUG("{0}, {1:x}h", i, output[i]);
     }
+#endif
 
     return output;
 }

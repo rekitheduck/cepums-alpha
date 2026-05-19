@@ -9,6 +9,16 @@
 
 #include "Processor/ProcessorUtils.h"
 
+#define REG_A "r" << static_cast<uint32_t>(register_a)
+#define REG_B "r" << static_cast<uint32_t>(register_b)
+#define REG_C "r" << static_cast<uint32_t>(register_c)
+#define MEM_DISPL std::hex << static_cast<int16_t>(memory_displacement) << std::dec << "h"
+#define BRANCH_DISPL std::hex << static_cast<int16_t>(branch_displacement) << std::dec << "h"
+#define INT_OPERATE_LIT std::hex << static_cast<int16_t>(integer_operate_literal) << std::dec << "h"
+#define SIGNED_DISPL_10 std::hex << static_cast<int16_t>(signed_displ_10) << std::dec << "h"
+#define HW_RET_DISPL_12 \
+    std::hex << static_cast<int16_t>(EXTRACT_HW_RET_DISPL_12(instruction_doubleword)) << std::dec << "h"
+
 namespace Cepums {
 
 namespace Disassembler {
@@ -35,10 +45,12 @@ void disassembleBinary(const std::vector<uint8_t>& blob, const uint64_t origin_a
         uint32_t branch_displacement = EXTRACT_BRANCH_DISPLACEMENT(instruction_doubleword);
         uint32_t pal_function = EXTRACT_PAL_FUNCTION(instruction_doubleword);
 
+        LOG_DEBUG("    instruction_doubleword 0b{0:b}", instruction_doubleword);
         LOG_DEBUG("    Register A: {0}  0b{0:b}", register_a);
         LOG_DEBUG("    Register B: {0}  0b{0:b}", register_b);
         LOG_DEBUG("    branch_displacement: {0:x}h  0b{0:b}", branch_displacement);
         LOG_DEBUG("    pal_function: {0:x}h  0b{0:b}", pal_function);
+        LOG_DEBUG("    memory_displacement: {0:x}h  0b{0:b}", memory_displacement);
         LOG_DEBUG("    integer_operate_function: {0:x}h ", integer_operate_function);
         LOG_DEBUG("    integer_operate_literal: {0:x}h ", integer_operate_literal);
         const auto instruction = decodeInstruction(opcode);
@@ -57,139 +69,117 @@ void disassembleBinary(const std::vector<uint8_t>& blob, const uint64_t origin_a
         // opcode is the first 6 bits, so it can hold 64 distinct values which means 64 instructions
         switch (instruction) {
             case Instruction::CallPal: {
+                if (instruction_doubleword == 0) {
+                    output << std::endl;
+                    break;
+                }
                 TODO();
                 break;
             }
             case Instruction::LDA: {
-                output << "lda r" << register_a << ", (" << std::hex << static_cast<int16_t>(memory_displacement)
-                       << std::dec << "h)r" << register_b << std::endl;
+                output << "lda " << REG_A << ", (" << MEM_DISPL << ") " << REG_B << std::endl;
                 break;
             }
             case Instruction::LDAH:
-                TODO();
-                // return ins$ldah(m, Cepums::Register(register_a), Cepums::Register(register_b), memory_displacement);
+                output << "ldah " << REG_A << ", (" << MEM_DISPL << ") " << REG_B << std::endl;
+                break;
             case Instruction::BR:
-            case Instruction::BSR:
-                output << "br r" << register_a << ", " << signExtendBranchDisplacementToQuad(branch_displacement)
+            case Instruction::BSR: {
+                output << "br " << REG_A << ", " << signExtendBranchDisplacementToQuad(branch_displacement)
                        << std::endl;
-                TODO();
-                // return ins$br(m, Cepums::Register(register_a), branch_displacement);
+                break;
+            }
+            case Instruction::MTPR: {
+                output << "mtpr " << REG_B << ", " << MEM_DISPL << std::endl;
+                break;
+            }
+            case Instruction::MFPR: {
+                output << "mfpr " << REG_A << ", " << MEM_DISPL << std::endl;
+                break;
+            }
 
-            case Instruction::MTPR: TODO();
-
-            //     return ins$mtpr(m, Cepums::Register(register_b),
-            //                     memory_displacement); // TODO: verify register a is 31 !!!
-            // case Instruction::MFPR: TODO(); return ins$mfpr(m, Cepums::Register(register_a), memory_displacement);
             case Instruction::HW_RET: {
-                TODO();
-
-                // return ins$hw_ret(m, Cepums::Register(register_b),
-                //                   Cepums::Literal(EXTRACT_HW_RET_DISPL_12(instruction_doubleword)),
-                //                   parseHW_RET_Hint(EXTRACT_HW_RET_HINT(instruction_doubleword)),
-                //                   EXTRACT_HW_RET_STALL_BIT(instruction_doubleword));
+                switch (parseHW_RET_Hint(EXTRACT_HW_RET_HINT(instruction_doubleword))) {
+                    case HW_RET_Hint::HW_JMP: output << "hw_jmp "; break;
+                    case HW_RET_Hint::HW_JSR: output << "hw_jsr "; break;
+                    case HW_RET_Hint::HW_RET: output << "hw_ret "; break;
+                    case HW_RET_Hint::HW_COROUTINE: output << "hw_coroutine "; break;
+                }
+                output << REG_B << ", " << HW_RET_DISPL_12 << std::endl;
+                break;
             }
             case Instruction::INTS: {
-                TODO();
-
                 // Integer Shift Instructions
-                // switch (integer_operate_opcode) {
-                //     case Instruction::SLL:
-                //         if (is_integer_operate_literal == 0) {
-                //             return ins$sll(m, Cepums::Register(register_a),
-                //             createScope<Cepums::Register>(register_b),
-                //                            Cepums::Register(register_c));
-                //         } else {
-                //             return ins$sll(m, Cepums::Register(register_a),
-                //                            createScope<Cepums::Literal>(integer_operate_literal),
-                //                            Cepums::Register(register_c));
-                //         }
-                //     default: TODO_INSTRUCTION(instructionMnemonic(integer_operate_opcode), opcode); return;
-                // }
+                switch (integer_operate_opcode) {
+                    case Instruction::SLL:
+                        if (is_integer_operate_literal == 0) {
+                            output << "sll " << REG_C << ", " << REG_A << ", " << REG_B << std::endl;
+                        } else {
+                            output << "sll " << REG_C << ", " REG_A << ", " << INT_OPERATE_LIT << std::endl;
+                        }
+                        break;
+                    default: TODO_INSTRUCTION(instructionMnemonic(integer_operate_opcode), opcode); return;
+                }
+                break;
             }
             case Instruction::HW_LD: {
-                TODO();
-
-                // const int16_t signed_displ_10 = EXTRACT_HW_LD_DISPL_10(instruction_doubleword);
-                // return ins$hw_ld(
-                //     m, Cepums::Register(register_a), Cepums::Register(register_b), Cepums::Literal(signed_displ_10),
-                //     Cepums::HW_LD_Flags(
-                //         EXTRACT_HW_LD_LOCK_BIT(instruction_doubleword),
-                //         EXTRACT_HW_LD_VPTE_BIT(instruction_doubleword),
-                //         EXTRACT_HW_LD_QUAD_BIT(instruction_doubleword),
-                //         EXTRACT_HW_LD_WRTCK_BIT(instruction_doubleword),
-                //         EXTRACT_HW_LD_ALT_BIT(instruction_doubleword),
-                //         EXTRACT_HW_LD_PHYS_BIT(instruction_doubleword)));
+                const int16_t signed_displ_10 = EXTRACT_HW_LD_DISPL_10(instruction_doubleword);
+                output << "hw_ld " << REG_A << ", " REG_B << ", " << SIGNED_DISPL_10 << std::endl;
+                break;
             }
             case Instruction::INTL: {
-                TODO();
-
                 // Integer Logical Instructions
-                // switch (integer_operate_opcode) {
-                //     case Instruction::AND:
-                //         if (is_integer_operate_literal == 0) {
-                //             return ins$and(m, Cepums::Register(register_a),
-                //             createScope<Cepums::Register>(register_b),
-                //                            Cepums::Register(register_c));
-                //         } else {
-                //             return ins$and(m, Cepums::Register(register_a),
-                //                            createScope<Cepums::Literal>(integer_operate_literal),
-                //                            Cepums::Register(register_c));
-                //         }
-                //     default: TODO_INSTRUCTION(instructionMnemonic(integer_operate_opcode), opcode); return;
-                // }
+                switch (integer_operate_opcode) {
+                    case Instruction::AND:
+                        if (is_integer_operate_literal == 0) {
+                            output << "and " << REG_C << ", " << REG_A << ", " << REG_B << std::endl;
+                        } else {
+                            output << "and " << REG_C << ", " REG_A << ", " << INT_OPERATE_LIT << std::endl;
+                        }
+                        break;
+                    default: TODO_INSTRUCTION(instructionMnemonic(integer_operate_opcode), opcode); return;
+                }
+                break;
             }
             case Instruction::INTA: {
-                TODO();
-
                 // Integer Arithmetic Instructions
-                // switch (integer_operate_opcode) {
-                //     case Instruction::ADDQ:
-                //         if (is_integer_operate_literal == 0) {
-                //             return ins$addq(m, Cepums::Register(register_a),
-                //             createScope<Cepums::Register>(register_b),
-                //                             Cepums::Register(register_c));
-                //         } else {
-                //             return ins$addq(m, Cepums::Register(register_a),
-                //                             createScope<Cepums::Literal>(integer_operate_literal),
-                //                             Cepums::Register(register_c));
-                //         }
-                //     default: TODO_INSTRUCTION(instructionMnemonic(integer_operate_opcode), opcode); return;
-                // }
+                switch (integer_operate_opcode) {
+                    case Instruction::ADDQ:
+                        if (is_integer_operate_literal == 0) {
+                            output << "addq " << REG_C << ", " << REG_A << ", " << REG_B << std::endl;
+                        } else {
+                            output << "addq " << REG_C << ", " REG_A << ", " << INT_OPERATE_LIT << std::endl;
+                        }
+                        break;
+                    default: TODO_INSTRUCTION(instructionMnemonic(integer_operate_opcode), opcode); return;
+                }
+                break;
             }
             case Instruction::INTM: {
-                TODO();
-
                 // Integer Multiply Instructions
-                // switch (integer_operate_opcode) {
-                //     case Instruction::MULL:
-                //         if (is_integer_operate_literal == 0) {
-                //             return ins$mull(m, Cepums::Register(register_a),
-                //             createScope<Cepums::Register>(register_b),
-                //                             Cepums::Register(register_c));
-                //         } else {
-                //             return ins$mull(m, Cepums::Register(register_a),
-                //                             createScope<Cepums::Literal>(integer_operate_literal),
-                //                             Cepums::Register(register_c));
-                //         }
-                //     default: TODO_INSTRUCTION(instructionMnemonic(integer_operate_opcode), opcode); return;
-                // }
+                switch (integer_operate_opcode) {
+                    case Instruction::MULL:
+                        if (is_integer_operate_literal == 0) {
+                            output << "mull " << REG_C << ", " << REG_A << ", " << REG_B << std::endl;
+                        } else {
+                            output << "mull " << REG_C << ", " REG_A << ", " << INT_OPERATE_LIT << std::endl;
+                        }
+                        break;
+                    default: TODO_INSTRUCTION(instructionMnemonic(integer_operate_opcode), opcode); return;
+                }
+                break;
             }
             case Instruction::JSR: {
-                TODO();
-
-                // TODO: use type hints to at least log the correct used mnemonic
-                // return ins$jmp(m, Cepums::Register(register_a), Cepums::Register(register_b));
+                output << "jsr " << REG_A << ", " << REG_B << std::endl;
+                break;
             }
             case Instruction::BNE: {
-                TODO();
-
-                // return ins$bne(m, Cepums::Register(register_a), Literal(branch_displacement));
+                output << "bne " << REG_A << ", " << BRANCH_DISPL << std::endl;
+                break;
             }
             case Instruction::STQ: {
-                TODO();
-
-                // return ins$stq(m, Cepums::Register(register_a), Cepums::Register(register_b),
-                //                Literal(memory_displacement));
+                output << "stq " << REG_A << ", " << REG_B << ", " << MEM_DISPL << std::endl;
+                break;
             }
             case Instruction::Invalid: ILLEGAL_INSTRUCTION(); return;
             default:
